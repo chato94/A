@@ -12,20 +12,11 @@ fs.readdir (__dirname, function (error, directory) {
 	fif (error, function () {paths = '';}, false, bfs, []);
 });
 
-function bfs (array) {
-	var q0 = new Queue (), q1 = new Queue (), on0 = true, tree = new NAryTree (':ROOT:', array.length);
-	for (var i = 0; i < array.length; i++) {
-		q0.push (array[i]);
-		tree.setithChild (i, new NAryTree (array[i], 0));
-	}
+function bfs (dirStr) {
+	var directories = new Queue ().push (dirStr), finalDirs = [];
 
-	while (q0.size () || q1.size ()) {
-		if (on0) {
+	function bfsWorker () {
 
-		} else {
-
-		}
-		on0 = !on0;
 	}
 }
 

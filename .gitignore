@@ -1,0 +1,12 @@
+# Custom files to ignore
+#########################
+dirAlg.txt
+
+# OS Generated Files
+#########################
+.DS_Store
+.DS_Store?
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

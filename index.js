@@ -5,9 +5,6 @@ var SERVER_IP = (function () {var nI = require ('os').networkInterfaces (), i, a
 /* Child process map and process number tracker variable */
 var childProcesses = {}, pN = 0;
 
-/* URL decoding regexes */
-var SPACE = /%20/g, NEWLINE = /%0A/g, AT = /%40/g, HASHTAG = /%23/g, DOLLAR = /%24/g, PERCENT = /%25/g, CARROT = /%5E/g, AMPERSAND = /%26/g, PLUS = /%2B/g, EQUALS = /%3D/g, OPENBRACE = /%7B/g, CLOSEBRACE = /%7D/g, OPENBRACKET = /%5B/g, CLOSEBRACKET = /%5D/g, PIPE = /%7C/g, BACKSLASH = /%5C/g, FORWARDSLASH = /%2F/g, COLON = /%3A/g, SEMICOLON = /%3B/g, DOUBLEQUOTE = /%22/g, SINGLEQUOTE = /%27/g, LESSTHAN = /%3C/g, GREATERTHAN = /%3E/g, COMMA = /%2C/g, QUESTIONMARK = /%3F/g, BACKTICK = /%60/g;
-
 var DNE = 'ENOENT', ISDIR = 'EISDIR', NOTDIR = 'ENOTDIR';
 
 /* Fork all necessary child processes */
@@ -46,7 +43,68 @@ process.on ('SIGINT', function () {
 });
 
 /* Helper functions and aliases */
-var n = '\n', t = '    ', $ = function (m) {console.log (m);}, $n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(n+a[i]);}, $t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(t+a[i]);}, $nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(n+t+a[i]) : $(t+a[i]);};
+var n = '\n', t = '    ', 
+$ = function (m) {console.log (m);}, 
+$n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(n+a[i]);}, 
+$t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(t+a[i]);}, 
+$nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(n+t+a[i]) : $(t+a[i]);};
+
+/* URL decoding regexes */
+var SPACE = /%20/g, 
+	NEWLINE = /%0A/g, 
+	AT = /%40/g, 
+	HASHTAG = /%23/g, 
+	DOLLAR = /%24/g, 
+	PERCENT = /%25/g, 
+	CARROT = /%5E/g, 
+	AMPERSAND = /%26/g, 
+	PLUS = /%2B/g, 
+	EQUALS = /%3D/g, 
+	OPENBRACE = /%7B/g, 
+	CLOSEBRACE = /%7D/g, 
+	OPENBRACKET = /%5B/g, 
+	CLOSEBRACKET = /%5D/g, 
+	PIPE = /%7C/g, 
+	BACKSLASH = /%5C/g, 
+	FORWARDSLASH = /%2F/g, 
+	COLON = /%3A/g, 
+	SEMICOLON = /%3B/g, 
+	DOUBLEQUOTE = /%22/g, 
+	SINGLEQUOTE = /%27/g, 
+	LESSTHAN = /%3C/g, 
+	GREATERTHAN = /%3E/g, 
+	COMMA = /%2C/g, 
+	QUESTIONMARK = /%3F/g, 
+	BACKTICK = /%60/g;
+
+function decodeURL (url) {
+	return url.replace (SPACE, ' ')
+		.replace (NEWLINE, '\n')
+		.replace (AT, '@')
+		.replace (HASHTAG, '#')
+		.replace (DOLLAR, '$')
+		.replace (PERCENT, '%')
+		.replace (CARROT, '^')
+		.replace (AMPERSAND, '&')
+		.replace (PLUS, '+')
+		.replace (EQUALS, '=')
+		.replace (OPENBRACE, '{')
+		.replace (CLOSEBRACE, '}')
+		.replace (OPENBRACKET, '[')
+		.replace (CLOSEBRACKET, ']')
+		.replace (PIPE, '|')
+		.replace (BACKSLASH, '\\')
+		.replace (FORWARDSLASH, '/')
+		.replace (COLON, ':')
+		.replace (SEMICOLON, ';')
+		.replace (DOUBLEQUOTE, '"')
+		.replace (SINGLEQUOTE, "'")
+		.replace (LESSTHAN, '<')
+		.replace (GREATERTHAN, '>')
+		.replace (COMMA, ',')
+		.replace (QUESTIONMARK, '?')
+		.replace (BACKTICK, '`');
+}
 
 /* Internal server error page and file/directory reading error names */
 var _500Page = '<DOCTYPE! html>' +

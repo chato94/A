@@ -18,3 +18,4 @@ var dirWatcher = cp.fork (__dirname + '/dir_watch.js');
 /* All available files and directories relative to this file */
 var currentDirectories = '""';
 
+/* Update the currentDirectories on change */

@@ -1,5 +1,5 @@
-/* Required Node.js modules for static file serving */
-var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process');
+/* Required Node.js modules and variables for static file serving */
+var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process'), server;
 var SERVER_IP = (function () {var nI = require ('os').networkInterfaces (), i, a; for (var p in nI) {i = nI[p]; for (var j = 0; j < i.length; j++) {a = i[j]; if (a.family === 'IPv4' && a.address !== '127.0.0.1' && !a.internal) return a.address;}} return '0.0.0.0';})(), PORT = 80, BACKLOG = 511;
 
 /* Child process map and process number tracker variable */
@@ -12,10 +12,34 @@ var SPACE = /%20/g, NEWLINE = /%0A/g, AT = /%40/g, HASHTAG = /%23/g, DOLLAR = /%
 var _500Page = '<DOCTYPE! html><html><head><title>500% Stamina</title></head><body><h1 style="margin: 0; padding: 0">Error 500: Internal Server Error</h1><p style="margin: 0; padding: 0">There was an internal server error. Rest assured that the monkeys are most likely working on it, and then try again later. If you keep seeing this message, make sure to contact your local developer and tell him that the machine blew up again. He (or she) will know exactly what that means, and hopefully the page that you loaded will be in tip-top shape before you know it.</p></body></html>';
 var DNE = 'ENOENT', ISDIR = 'EISDIR', NOTDIR = 'ENOTDIR';
 
-/* Fork the process that keeps track of directory changes */
+/* Fork all necessary child processes */
 var dirWatcher = cp.fork (__dirname + '/dir_watch.js');
 
 /* All available files and directories relative to this file */
-var currentDirectories = '""';
+var currentDirectories = '""', receivedInit = false;
 
-/* Update the currentDirectories on change */
+/* Wait until first update of directories to start serving files */
+var start = setInterval (function () {
+	if (receivedInit) server = http.createServer (serverHandler).listen (PORT, SERVER_IP, BACKLOG, function () {
+		$('** The server is up and running! Listening to requests on port ' + PORT + ' at ' + SERVER_IP + ' **\n');
+	});
+}, 500);
+
+/* Handle incoming messages from child processes */
+process.on ('message', function (m) {
+	switch (m[0]) {
+		case 'Update Directory':
+			if (!receivedInit) receivedInit = true;
+			currentDirectories = m[1];
+			break;
+	}
+});
+
+/* Kill all child processes on exit */
+process.on ('SIGINT', function () {
+	dirWatcher.kill ();
+	process.exit ();
+});
+
+/* Helper functions and aliases */
+var n = '\n', t = '    ', $ = function () {for (var i = 0, a = arguments; i < a.length; i++) $(a[i]);}, $n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(n+a[i]);}, $t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(t+a[i]);}, $nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(n+t+a[i]) : $(t+a[i]);};

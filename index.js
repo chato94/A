@@ -8,8 +8,6 @@ var childProcesses = {}, pN = 0;
 /* URL decoding regexes */
 var SPACE = /%20/g, NEWLINE = /%0A/g, AT = /%40/g, HASHTAG = /%23/g, DOLLAR = /%24/g, PERCENT = /%25/g, CARROT = /%5E/g, AMPERSAND = /%26/g, PLUS = /%2B/g, EQUALS = /%3D/g, OPENBRACE = /%7B/g, CLOSEBRACE = /%7D/g, OPENBRACKET = /%5B/g, CLOSEBRACKET = /%5D/g, PIPE = /%7C/g, BACKSLASH = /%5C/g, FORWARDSLASH = /%2F/g, COLON = /%3A/g, SEMICOLON = /%3B/g, DOUBLEQUOTE = /%22/g, SINGLEQUOTE = /%27/g, LESSTHAN = /%3C/g, GREATERTHAN = /%3E/g, COMMA = /%2C/g, QUESTIONMARK = /%3F/g, BACKTICK = /%60/g;
 
-/* Internal server error page and file/directory reading error names */
-var _500Page = '<DOCTYPE! html><html><head><title>500% Stamina</title></head><body><h1 style="margin: 0; padding: 0">Error 500: Internal Server Error</h1><p style="margin: 0; padding: 0">There was an internal server error. Rest assured that the monkeys are most likely working on it, and then try again later. If you keep seeing this message, make sure to contact your local developer and tell him that the machine blew up again. He (or she) will know exactly what that means, and hopefully the page that you loaded will be in tip-top shape before you know it.</p></body></html>';
 var DNE = 'ENOENT', ISDIR = 'EISDIR', NOTDIR = 'ENOTDIR';
 
 /* Fork all necessary child processes */
@@ -22,8 +20,14 @@ var currentDirectories = '""', receivedInit = false;
 var start = setInterval (function () {
 	if (receivedInit) server = http.createServer (serverHandler).listen (PORT, SERVER_IP, BACKLOG, function () {
 		$('** The server is up and running! Listening to requests on port ' + PORT + ' at ' + SERVER_IP + ' **\n');
+		clearTimeout (start);
 	});
 }, 500);
+
+/* Root of all callback functions */
+function serverHandler (request, response) {
+
+}
 
 /* Handle incoming messages from child processes */
 process.on ('message', function (m) {
@@ -42,4 +46,22 @@ process.on ('SIGINT', function () {
 });
 
 /* Helper functions and aliases */
-var n = '\n', t = '    ', $ = function () {for (var i = 0, a = arguments; i < a.length; i++) $(a[i]);}, $n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(n+a[i]);}, $t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(t+a[i]);}, $nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(n+t+a[i]) : $(t+a[i]);};
+var n = '\n', t = '    ', $ = function (m) {console.log (m);}, $n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(n+a[i]);}, $t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(t+a[i]);}, $nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(n+t+a[i]) : $(t+a[i]);};
+
+/* Internal server error page and file/directory reading error names */
+var _500Page = '<DOCTYPE! html>' +
+'<html>' +
+	'<head>' +
+		'<title>500% Stamina</title>' +
+	'</head>' +
+	'<body>' +
+		'<h1 style="margin: 0; padding: 0">Error 500: Internal Server Error</h1>' +
+		'<p style="margin: 0; padding: 0">' +
+			'There was an internal server error. Rest assured that the monkeys are most ' +
+			'likely working on it, and then try again later. If you keep seeing this message, ' +
+			'make sure to contact your local developer and tell him that the machine blew ' +
+			'up again. He (or she) will know exactly what that means, and hopefully the page ' +
+			'that you loaded will be in tip-top shape before you know it.' +
+		'</p>' +
+	'</body>' +
+'</html>';

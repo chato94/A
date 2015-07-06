@@ -1,6 +1,7 @@
 # Custom files to ignore
 #########################
 dirAlg.txt
+NodeTest.js
 
 # OS Generated Files
 #########################

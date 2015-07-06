@@ -6,31 +6,56 @@
  * upon detection of a file change. Note that this does not scale well with
  * many files to keep track of.
  */
-var fs = require ('fs'), paths = [];
+var fs = require ('fs'), paths = bfs (__dirname), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/';
+paths.sort ();
+process.send (concat (paths));
 
-fs.readdir (__dirname, function (error, directory) {
-	fif (error, function () {paths = '';}, false, bfs, []);
-});
+setInterval (function () {
+	var updatedPaths = bfs (__dirname);
+	updatedPaths.sort ();
+
+	if (updatedPaths.length !== paths.length) {
+		paths = updatedPaths;
+		process.send (concat (updatedPaths));
+	} else {
+		for (var i = 0; i < paths.length; i++) {
+			if (paths[i] !== updatedPaths[i]) {
+				paths = updatedPaths;
+				process.send (concat (updatedPaths));
+				break;
+			}
+		}
+	}
+
+}, 1000);
+
+function concat (array) {return '"' + array.join ('" "') + '"';}
 
 function bfs (dirStr) {
 	var directories = new Queue ().push (dirStr), finalDirs = [];
 
-	function bfsWorker () {
+	function bfsWorker (path) {
+		try {
+			var directory = fs.readdirSync (path);
+			if (directory.length) {
+				for (var i = 0; i < directory.length; i++) directories.push (path + S + directory[i]);
+			} else {
+				finalDirs.push (path);
+			} 
+		} catch (error) {
+			if (error.code === 'ENOTDIR') {
+				finalDirs.push (path);
+			} else {
+				console.log ('FATAL ERROR: SOMETHING BAD HAPPENED\n');
+				console.log (error);
+			}
+		}
 
+		if (directories.size ()) bfsWorker (directories.pop ().val ());
 	}
-}
 
-function NAryTree (val, l) {
-	var root = val, children = [], n = l;
-	for (var i = 0; i < n; i++) children.push (null);
-
-	this.isLeaf = function () {for (var i = 0; i < n; i++) if (children[i] !== null) return false; return true;};
-	this.getChildrenArray = function () {return children;};
-	this.getithChild = function (i) {return children[i];};
-	this.N = function () {return n;};
-	this.setithChild = function (i, toMe) {if (i < n) children[i] = toMe; return this;};
-	this.setChildrenArray = function (toMe) {if (toMe.length === n) children = toMe; return this;};
-	this.setN = function (l) {n = l; children = []; for (var i = 0; i < n; i++) children.push (null); return this;};
+	bfsWorker (directories.pop ().val ());
+	return finalDirs;
 }
 
 function Queue () {
@@ -51,6 +76,3 @@ function Stack () {
 	this.val = function () {return popValue;};
 	this.toString = function () {var s = ''; for (var l = stack.length - 1, i = l; i >= 0; i--) s +=  i < l? i === l - 1? '| ' + stack[i] : ', ' + stack[i] : stack[i]; return '<' + s + '>';};
 }
-
-/* functional if -> alias for ternary operator --> ? */
-function fif (c, T, t, F, f) {c? t? T.apply (T, t) : T () : f? F.apply (F, f) : F ();}

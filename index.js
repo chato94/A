@@ -12,3 +12,9 @@ var SPACE = /%20/g, NEWLINE = /%0A/g, AT = /%40/g, HASHTAG = /%23/g, DOLLAR = /%
 var _500Page = '<DOCTYPE! html><html><head><title>500% Stamina</title></head><body><h1 style="margin: 0; padding: 0">Error 500: Internal Server Error</h1><p style="margin: 0; padding: 0">There was an internal server error. Rest assured that the monkeys are most likely working on it, and then try again later. If you keep seeing this message, make sure to contact your local developer and tell him that the machine blew up again. He (or she) will know exactly what that means, and hopefully the page that you loaded will be in tip-top shape before you know it.</p></body></html>';
 var DNE = 'ENOENT', ISDIR = 'EISDIR', NOTDIR = 'ENOTDIR';
 
+/* Fork the process that keeps track of directory changes */
+var dirWatcher = cp.fork (__dirname + '/dir_watch.js');
+
+/* All available files and directories relative to this file */
+var currentDirectories = '""';
+

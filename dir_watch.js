@@ -29,7 +29,7 @@ setInterval (function () {
 
 }, 1000);
 
-function concat (array) {return '"' + array.join ('" "') + '"';}
+function concat (array) {return ['Update Directory', '"' + array.join ('" "') + '"'];}
 
 function bfs (dirStr) {
 	var directories = new Queue ().push (dirStr), finalDirs = [];
@@ -66,13 +66,4 @@ function Queue () {
 	this.val = function () {return popValue;};
 	this.array = function () {return queue;};
 	this.toString = function () {var s = ''; for (var i = 0; i < queue.length; i++) s += i > 1? ', ' + queue[i] : i === 1? '| ' + queue[i] : queue[i]; return '<' + s + '>';};
-}
-
-function Stack () {
-	var stack = [], popValue;
-	this.size = function () {return stack.length;};
-	this.push = function (me) {stack.push (me); return this;};
-	this.pop = function () {popValue = stack.splice[stack.length - 1, 1][0]; return this;};
-	this.val = function () {return popValue;};
-	this.toString = function () {var s = ''; for (var l = stack.length - 1, i = l; i >= 0; i--) s +=  i < l? i === l - 1? '| ' + stack[i] : ', ' + stack[i] : stack[i]; return '<' + s + '>';};
 }

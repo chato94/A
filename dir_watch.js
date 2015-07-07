@@ -29,7 +29,10 @@ setInterval (function () {
 
 }, 1000);
 
-function concat (array) {return ['Update Directory', '"' + array.join ('" "') + '"'];}
+function concat (array) {
+	for (var i = 0; i < array.length; i++) array[i] = array[i].replace (new RegExp (deRegEx (__dirname)), '');
+	return ['Update Directory', '"' + array.join ('" "') + '"'];
+}
 
 function bfs (dirStr) {
 	var directories = new Queue ().push (dirStr), finalDirs = [];
@@ -66,4 +69,22 @@ function Queue () {
 	this.val = function () {return popValue;};
 	this.array = function () {return queue;};
 	this.toString = function () {var s = ''; for (var i = 0; i < queue.length; i++) s += i > 1? ', ' + queue[i] : i === 1? '| ' + queue[i] : queue[i]; return '<' + s + '>';};
+}
+
+function deRegEx (str) {
+	return str.replace (/\?/g, '\\?')
+		.replace (/\+/g, '\\+')
+		.replace (/\[/g, '\\[')
+		.replace (/\]/g, '\\]')
+		.replace (/\{/g, '\\{')
+		.replace (/\}/g, '\\}')
+		.replace (/\./g, '\\.')
+		.replace (/\*/g, '\\*')
+		.replace (/\^/g, '\\^')
+		.replace (/\$/, '\\$')
+		.replace (/\(/g, '\\(')
+		.replace (/\)/g, '\\)')
+		.replace (/\|/g, '\\|');
+		/*.replace (/\\/g, '\\\\')
+		.replace (/\//g, '\\/')*/
 }

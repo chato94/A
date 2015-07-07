@@ -6,7 +6,9 @@
  * upon detection of a file change. Note that this does not scale well with
  * many files to keep track of.
  */
-var fs = require ('fs'), allPaths = bfs (__dirname), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', SECONDS = 1, p = process;
+var fs = require ('fs'), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', allPaths = bfs (__dirname), SECONDS = 1, p = process;
+console.log ('\n"dir_watch.js" child process started! S: ' + S);
+
 allPaths.sort ();
 process.send (concat (allPaths));
 
@@ -15,11 +17,13 @@ setInterval (function () {
 	newPaths.sort ();
 
 	if (newPaths.length !== allPaths.length) {
+		console.log ('lengths don\'t match!: ' + newPaths.length + ' vs ' + allPaths.length);
 		allPaths = newPaths;
 		process.send (concat (newPaths));
 	} else {
 		for (var i = 0; i < allPaths.length; i++) {
 			if (allPaths[i] !== newPaths[i]) {
+				console.log ('not a match!: ' + allPaths[i] + ' vs ' + newPaths[i]);
 				allPaths = newPaths;
 				process.send (concat (newPaths));
 				break;
@@ -39,8 +43,10 @@ function updatePaths () {
 }
 
 function concat (array) {
-	for (var i = 0; i < array.length; i++) array[i] = array[i].replace (new RegExp ('^' + deRegEx (__dirname)), '').replace (/\\/g, '/');
-	return ['Update Directory', '"' + array.join ('" "') + '"'];
+	var newArray = [];
+	console.log ('concat called!');
+	for (var i = 0; i < array.length; i++) newArray[i] = array[i].replace (new RegExp ('^' + deRegEx (__dirname)), '').replace (/\\/g, '/');
+	return ['Update Directory', '"' + newArray.join ('" "') + '"'];
 }
 
 function bfs (dirStr) {
@@ -49,9 +55,9 @@ function bfs (dirStr) {
 	function bfsWorker (path) {
 		try {
 			var dir = fs.readdirSync (path);
-			dir.length? for (var i = 0; i < dir.length; i++) dirs.push (path + S + dir[i]) : all.push (path + ':DIRECTORY');
+			dir.length? (function () {for (var i = 0; i < dir.length; i++) dirs.push (path + S + dir[i]);})() : all.push (path + ':DIRECTORY');
 		} catch (error) {
-			error.code === 'ENOTDIR'? all.push (path + ':FILE') : console.log ('UNKNOWN ERROR OCCURRED:\n' + error);
+			error.code === 'ENOTDIR'? all.push (path + ':FILE') : console.log ('UNKNOWN ERROR OCCURRED:\n' + error + '\n');
 		} 
 
 		if (dirs.length) bfsWorker (dirs.splice (0, 1)[0]);

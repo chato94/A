@@ -30,7 +30,7 @@ setInterval (function () {
 }, 1000);
 
 function concat (array) {
-	for (var i = 0; i < array.length; i++) array[i] = array[i].replace (new RegExp (deRegEx (__dirname)), '');
+	for (var i = 0; i < array.length; i++) array[i] = array[i].replace (new RegExp ('^' + deRegEx (__dirname)), '').replace (/\\/g, '/');
 	return ['Update Directory', '"' + array.join ('" "') + '"'];
 }
 

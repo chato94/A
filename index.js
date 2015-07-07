@@ -5,13 +5,17 @@ var SERVER_IP = (function () {var nI = require ('os').networkInterfaces (), i, a
 /* Child process map and process number tracker variable */
 var childProcesses = {}, pN = 0;
 
+/*  */
 var DNE = 'ENOENT', ISDIR = 'EISDIR', NOTDIR = 'ENOTDIR';
 
 /* Fork all necessary child processes */
 var dirWatcher = cp.fork (__dirname + '/dir_watch.js');
 
 /* All available files and directories relative to this file */
-var currentDirectories = '""', receivedInit = false;
+var rootDir = '""', receivedInit = false;
+
+/* Client Page Map --> Keeps track of the page that users are on when the request does not concatenate the root to the URL */
+var cMP = {};
 
 /* Wait until first update of directories to start serving files */
 var start = setInterval (function () {
@@ -23,7 +27,29 @@ var start = setInterval (function () {
 
 /* Root of all callback functions */
 function serverHandler (request, response) {
+	var IP = request.headers['x-forwarded-for'] || request.connection.remoteAddress || request.socket.remoteAddress || request.connection.socket.remoteAddress;
+	$('*** Incoming request heard! Initializing response for ' + IP + ' ***')
+	request.method === 'GET'? GETHandler (request, response, IP) : POSTHandler (request, response, IP);
+}
 
+function POSTHandler (request, response, IP) {
+	$n('*** POST Methods are coming soon. Sending an HTML response for now to ' + IP + ' ***');
+	response.writeHead (200, {'Content-Type': 'text/html'});
+	response.write ('<html><h2>POST Request Heard!</h2><p>Stay tuned for more later.</p></html>', function () {response.end ();});
+}
+
+function GETHandler (request, response, IP) {
+	var url = decodeURL (request.url);
+	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url);
+	cMP[IP]? mergeAndServe (url, response, IP) : matchAndServe (url, response, IP) ;
+}
+
+function mergeAndServe (url, response, IP) {
+
+}
+
+function matchAndServe (url, response, IP) {
+	
 }
 
 /* Handle incoming messages from child processes */
@@ -31,18 +57,25 @@ process.on ('message', function (m) {
 	switch (m[0]) {
 		case 'Update Directory':
 			if (!receivedInit) receivedInit = true;
-			currentDirectories = m[1];
+			rootDir = m[1];
 			break;
 	}
 });
 
 /* Kill all child processes on exit */
-process.on ('SIGINT', function () {
+process.on ('SIGINT', killChildrenAndExit);
+process.on ('exit', killChildrenAndExit)
+
+function killChildrenAndExit () {
 	dirWatcher.kill ();
 	process.exit ();
-});
+}
 
-/* Helper functions and aliases */
+/**
+ * Helper functions and aliases
+ */
+
+/* console.log alias functions */
 var n = '\n', t = '    ', 
 $ = function (m) {console.log (m);}, 
 $n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(n+a[i]);}, 
@@ -105,6 +138,25 @@ function decodeURL (url) {
 		.replace (QUESTIONMARK, '?')
 		.replace (BACKTICK, '`');
 }
+
+function deRegEx (str) {
+	return str.replace (/\?/g, '\\?')
+		.replace (/\+/g, '\\+')
+		.replace (/\[/g, '\\[')
+		.replace (/\]/g, '\\]')
+		.replace (/\{/g, '\\{')
+		.replace (/\}/g, '\\}')
+		.replace (/\./g, '\\.')
+		.replace (/\*/g, '\\*')
+		.replace (/\^/g, '\\^')
+		.replace (/\$/, '\\$')
+		.replace (/\(/g, '\\(')
+		.replace (/\)/g, '\\)')
+		.replace (/\|/g, '\\|');
+		/*.replace (/\\/g, '\\\\')
+		.replace (/\//g, '\\/')*/
+}
+
 
 /* Internal server error page and file/directory reading error names */
 var _500Page = '<DOCTYPE! html>' +

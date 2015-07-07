@@ -40,11 +40,11 @@ function bfs (dirStr) {
 			if (directory.length) {
 				for (var i = 0; i < directory.length; i++) directories.push (path + S + directory[i]);
 			} else {
-				finalDirs.push (path);
+				finalDirs.push (path + ':DIRECTORY');
 			} 
 		} catch (error) {
 			if (error.code === 'ENOTDIR') {
-				finalDirs.push (path);
+				finalDirs.push (path + ':FILE');
 			} else {
 				console.log ('FATAL ERROR: SOMETHING BAD HAPPENED\n');
 				console.log (error);

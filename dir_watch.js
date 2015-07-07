@@ -6,28 +6,37 @@
  * upon detection of a file change. Note that this does not scale well with
  * many files to keep track of.
  */
-var fs = require ('fs'), paths = bfs (__dirname), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/';
-paths.sort ();
-process.send (concat (paths));
+var fs = require ('fs'), allPaths = bfs (__dirname), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', SECONDS = 1, p = process;
+allPaths.sort ();
+process.send (concat (allPaths));
 
 setInterval (function () {
-	var updatedPaths = bfs (__dirname);
-	updatedPaths.sort ();
+	var newPaths = bfs (__dirname);
+	newPaths.sort ();
 
-	if (updatedPaths.length !== paths.length) {
-		paths = updatedPaths;
-		process.send (concat (updatedPaths));
+	if (newPaths.length !== allPaths.length) {
+		allPaths = newPaths;
+		process.send (concat (newPaths));
 	} else {
-		for (var i = 0; i < paths.length; i++) {
-			if (paths[i] !== updatedPaths[i]) {
-				paths = updatedPaths;
-				process.send (concat (updatedPaths));
+		for (var i = 0; i < allPaths.length; i++) {
+			if (allPaths[i] !== newPaths[i]) {
+				allPaths = newPaths;
+				process.send (concat (newPaths));
 				break;
 			}
 		}
 	}
+}, SECONDS * 1000);
 
-}, 1000);
+function updatePaths () {
+	var d = bfs (__dirname);
+	d.sort ();
+
+	d.length !== allPaths.length? _true () : _false ();
+
+	function _true () {allPaths = d; p.send (concat (d));}
+	function _false () {for (var i = 0; i < d.length; i++) if (allPaths[i] !== d[i]) {allPaths = d; p.send (concat (d)); break;}}
+}
 
 function concat (array) {
 	for (var i = 0; i < array.length; i++) array[i] = array[i].replace (new RegExp ('^' + deRegEx (__dirname)), '').replace (/\\/g, '/');
@@ -35,40 +44,21 @@ function concat (array) {
 }
 
 function bfs (dirStr) {
-	var directories = new Queue ().push (dirStr), finalDirs = [];
+	var dirs = [dirStr], all = [];
 
 	function bfsWorker (path) {
 		try {
-			var directory = fs.readdirSync (path);
-			if (directory.length) {
-				for (var i = 0; i < directory.length; i++) directories.push (path + S + directory[i]);
-			} else {
-				finalDirs.push (path + ':DIRECTORY');
-			} 
+			var dir = fs.readdirSync (path);
+			dir.length? for (var i = 0; i < dir.length; i++) dirs.push (path + S + dir[i]) : all.push (path + ':DIRECTORY');
 		} catch (error) {
-			if (error.code === 'ENOTDIR') {
-				finalDirs.push (path + ':FILE');
-			} else {
-				console.log ('FATAL ERROR: SOMETHING BAD HAPPENED\n');
-				console.log (error);
-			}
-		}
+			error.code === 'ENOTDIR'? all.push (path + ':FILE') : console.log ('UNKNOWN ERROR OCCURRED:\n' + error);
+		} 
 
-		if (directories.size ()) bfsWorker (directories.pop ().val ());
+		if (dirs.length) bfsWorker (dirs.splice (0, 1)[0]);
 	}
 
-	bfsWorker (directories.pop ().val ());
-	return finalDirs;
-}
-
-function Queue () {
-	var queue = [], popValue;
-	this.size = function () {return queue.length;};
-	this.push = function (me) {queue.push (me); return this;};
-	this.pop = function () {popValue = queue.splice (0, 1)[0]; return this;};
-	this.val = function () {return popValue;};
-	this.array = function () {return queue;};
-	this.toString = function () {var s = ''; for (var i = 0; i < queue.length; i++) s += i > 1? ', ' + queue[i] : i === 1? '| ' + queue[i] : queue[i]; return '<' + s + '>';};
+	bfsWorker (dirs.splice (0, 1)[0]);
+	return all;
 }
 
 function deRegEx (str) {

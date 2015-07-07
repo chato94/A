@@ -39,21 +39,35 @@ function POSTHandler (request, response, IP) {
 }
 
 function GETHandler (request, response, IP) {
-	var url = decodeURL (request.url);
+	var url = decodeURL (request.url), FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY');
 	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url);
-	cMP[IP]? mergeAndServe (url, response, IP) : matchAndServe (url, response, IP) ;
+	rootDir.match (FILE) || rootDir.match (DIRECTORY)? urlMatches (url, response, IP, FILE) : urlDoesNotMatch (url, response, IP) ;
 }
 
-function mergeAndServe (url, response, IP) {
-
+function urlMatches (url, response, IP, FILE) {
+	//rootDir.match (FILE)? url.match (/\.html$/)? (function () {cMP[IP] = path.dirname (url)})() : read (url, response, IP) : ;
 }
 
-function matchAndServe (url, response, IP) {
+function urlDoesNotMatch (url, response, IP) {
 	
 }
 
+function send404 (url, response, IP) {
+	$nt('There was a problem reading "' + url + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
+}
+
+function read (url, response, IP) {
+	fs.readfile (url, function (error, content) {
+		error? send404 (url, response, IP) : respondTo (response, IP, content, MIMEType ())
+	});
+}
+
+function respondTo (response, IP, content, MIME, CODE) {
+
+}
+
 /* Handle incoming messages from child processes */
-process.on ('message', function (m) {
+dirWatcher.on ('message', function (m) {
 	switch (m[0]) {
 		case 'Update Directory':
 			if (!receivedInit) receivedInit = true;
@@ -109,6 +123,58 @@ var SPACE = /%20/g,
 	COMMA = /%2C/g, 
 	QUESTIONMARK = /%3F/g, 
 	BACKTICK = /%60/g;
+
+var extensionMap = {
+	'.js': 'text/javascript', 
+	'.css': 'text/css', 
+	'.html': 'text/html', 
+	'.jpeg': 'image/jpeg/', 
+	'.jpg': 'image/jpeg', 
+	'.png': 'image/png', 
+	'.gif': 'image/gif', 
+	'.ico': 'image/x-icon', 
+	'.svg': 'image/svg+xml', 
+	'.woff2': 'application/font-woff2', 
+	'.woff': 'application/x-font-woff', 
+	'.wav': 'audio/x-wav', 
+	'.pdf': 'application/pdf', 
+	'.zip': 'application/zip', 
+	'.rar': 'application/x-rar-compressed', 
+	'.mp3': 'audio/mpeg', 
+	'.mp4': 'video/mp4', 
+	'.avi': 'video/x-msvideo', 
+	'.ttf': 'application/x-font-ttf', 
+	'.3gp': 'video/3gpp', 
+	'.7z': 'application/x-7z-compressed', 
+	'.swf': 'application/x-shockwave-flash', 
+	'.aac': 'audio/x-aac', 
+	'.wma': 'audio/x-ms-wma', 
+	'.webm': 'video/webm', 
+	'.weba': 'audio/webm', 
+	'.flv': 'video/x-flv', 
+	'.apk': 'application/vnd.android.package-archive', 
+	'.s': 'text/x-asm', 
+	'.psd': 'image/vnd.adobe.photoshop', 
+	'.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 
+	'.sldx': 'application/vnd.openxmlformats-officedocument.presentationml.slide', 
+	'.ppsx': 'application/vnd.openxmlformats-officedocument.slideshow', 
+	'.potx': 'application/vnd.openxmlformats-officedocument.template', 
+	'.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+	'.xltx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.template', 
+	'.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+	'.dotx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.template', 
+	'.java': 'text/x-java-source.java,java', 
+	'.class': 'application/java-vm', 
+	'.jar': 'application/java-archive', 
+	'.json': 'application/json', 
+	'.latex': 'application/x-latex', 
+	'.torrent': 'application/x-bittorrent'
+}, ext = /\..+$/;
+
+function MIMEType (file) {
+	var extension = file.match (ext)? file.match (ext)[0] : 'dne';
+	return extensionMap[extension] || 'text/plain';
+}
 
 function decodeURL (url) {
 	return url.replace (SPACE, ' ')

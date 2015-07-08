@@ -22,29 +22,30 @@ var start = setInterval (function () {
 	});
 }, 500);
 
-/* Root of all callback functions */
+/* Function from which all other callbacks execute */
 function serverHandler (request, response) {
 	var IP = request.headers['x-forwarded-for'] || request.connection.remoteAddress || request.socket.remoteAddress || request.connection.socket.remoteAddress;
-	$('*** Incoming request heard! Initializing response for ' + IP + ' ***')
+	$('*** Incoming request heard! Initializing response for ' + IP + ' ***');
 	request.method === 'GET'? GETHandler (request, response, IP) : POSTHandler (request, response, IP);
 }
 
+/* Root function of the POST request handling function tree */
 function POSTHandler (request, response, IP) {
 	var html = '<!DOCTYPE html><html><h2>POST Request Heard!</h2><p>Stay tuned for more later.</p></html>';
 	$nt('POST Methods are coming soon. Sending an HTML response for now to ' + IP);
 	respondTo (response, html, 200, 'text/html', 'POST Method', IP);
 }
 
+/* Root function of the GET request handling function tree */
 function GETHandler (request, response, IP) {
 	var url = decodeURL (request.url), FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY');
-	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url);
+	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE: ' + FILE, 'DIRECTORY: ' + DIRECTORY);
 	rootDir.match (FILE) || rootDir.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : urlDoesNotMatch (url, response, IP) ;
 }
 
 function urlMatchesDir (url, response, IP, FILE) {
-	function setMap (dirname) {cMP[IP] = dirname? '.' + path.dirname (url) : '.' + url;}
-	$nt('The url "' + url + '"matches to a file in the current directory!')
-	rootDir.match (FILE)? url.match (/\.html$/)? setMap (true) : read (url, response, IP) : setMap (false);
+	$nt('The url "' + url + '"matches to a file in the current directory!');
+	rootDir.match (FILE)? url.match (/\.html$/)? setMap (url, IP, true) : read (url, response, IP) : setMap (url, IP, false);
 }
 
 function urlDoesNotMatch (url, response, IP) {
@@ -59,7 +60,7 @@ function read (url, response, IP) {
 
 function send404 (url, response, IP) {
 	$nt('There was a problem reading "' + url + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
-	cMP[IP] = './404'
+	setMap ('/404', IP, false);
 }
 
 function send500 (url, response, IP) {
@@ -85,7 +86,7 @@ dirWatcher.on ('message', function (m) {
 
 /* Kill all child processes on exit */
 process.on ('SIGINT', killChildrenAndExit);
-process.on ('exit', killChildrenAndExit)
+process.on ('exit', killChildrenAndExit);
 
 function killChildrenAndExit () {
 	dirWatcher.kill ();
@@ -95,13 +96,17 @@ function killChildrenAndExit () {
 /**
  * Helper functions and aliases
  */
+/* Sets the global map for the client */
+function setMap (url, IP, useDirname) {
+	cMP[IP] = '.' + useDirname? path.dirname (url) : url;
+}
 
 /* console.log alias functions */
 var n = '\n', t = '    ', 
-$ = function (m) {console.log (m);}, 
-$n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(n+a[i]);}, 
-$t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(t+a[i]);}, 
-$nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(n+t+a[i]) : $(t+a[i]);};
+	$ = function (m) {console.log (m);}, 
+	$n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(n+a[i]);}, 
+	$t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(t+a[i]);}, 
+	$nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(n+t+a[i]) : $(t+a[i]);};
 
 /* URL decoding regexes */
 var SPACE = /%20/g, 
@@ -184,7 +189,9 @@ function MIMEType (file) {
 }
 
 function decodeURL (url) {
-	return url.replace (SPACE, ' ')
+	// Convert the initial request into a directory that actually exists
+	var temp = url === '/' || url === '/index.html'? '/init/index.html' : url;
+	return temp.replace (SPACE, ' ')
 		.replace (NEWLINE, '\n')
 		.replace (AT, '@')
 		.replace (HASHTAG, '#')

@@ -2,10 +2,7 @@
 var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process'), server;
 var SERVER_IP = (function () {var nI = require ('os').networkInterfaces (), i, a; for (var p in nI) {i = nI[p]; for (var j = 0; j < i.length; j++) {a = i[j]; if (a.family === 'IPv4' && a.address !== '127.0.0.1' && !a.internal) return a.address;}} return '0.0.0.0';})(), PORT = 80, BACKLOG = 511;
 
-/* Child process map and process number tracker variable */
-var childProcesses = {}, pN = 0;
-
-/*  */
+/* Error code variable aliases */
 var DNE = 'ENOENT', ISDIR = 'EISDIR', NOTDIR = 'ENOTDIR';
 
 /* Fork all necessary child processes */
@@ -33,37 +30,47 @@ function serverHandler (request, response) {
 }
 
 function POSTHandler (request, response, IP) {
-	$n('*** POST Methods are coming soon. Sending an HTML response for now to ' + IP + ' ***');
-	response.writeHead (200, {'Content-Type': 'text/html'});
-	response.write ('<html><h2>POST Request Heard!</h2><p>Stay tuned for more later.</p></html>', function () {response.end ();});
+	var html = '<!DOCTYPE html><html><h2>POST Request Heard!</h2><p>Stay tuned for more later.</p></html>';
+	$nt('POST Methods are coming soon. Sending an HTML response for now to ' + IP);
+	respondTo (response, html, 200, 'text/html', 'POST Method', IP);
 }
 
 function GETHandler (request, response, IP) {
 	var url = decodeURL (request.url), FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY');
 	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url);
-	rootDir.match (FILE) || rootDir.match (DIRECTORY)? urlMatches (url, response, IP, FILE) : urlDoesNotMatch (url, response, IP) ;
+	rootDir.match (FILE) || rootDir.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : urlDoesNotMatch (url, response, IP) ;
 }
 
-function urlMatches (url, response, IP, FILE) {
-	//rootDir.match (FILE)? url.match (/\.html$/)? (function () {cMP[IP] = path.dirname (url)})() : read (url, response, IP) : ;
+function urlMatchesDir (url, response, IP, FILE) {
+	function setMap (dirname) {cMP[IP] = dirname? '.' + path.dirname (url) : '.' + url;}
+	$nt('The url "' + url + '"matches to a file in the current directory!')
+	rootDir.match (FILE)? url.match (/\.html$/)? setMap (true) : read (url, response, IP) : setMap (false);
 }
 
 function urlDoesNotMatch (url, response, IP) {
 	
 }
 
-function send404 (url, response, IP) {
-	$nt('There was a problem reading "' + url + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
-}
-
 function read (url, response, IP) {
-	fs.readfile (url, function (error, content) {
-		error? send404 (url, response, IP) : respondTo (response, IP, content, MIMEType ())
+	fs.readFile (url, function (error, content) {
+		error? send404 (url, response, IP) : respondTo (response, content, 200, MIMEType (path.basename (url)), url, IP);
 	});
 }
 
-function respondTo (response, IP, content, MIME, CODE) {
+function send404 (url, response, IP) {
+	$nt('There was a problem reading "' + url + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
+	cMP[IP] = './404'
+}
 
+function send500 (url, response, IP) {
+	$nt('The url "' + url + '" was guaranteed to be in the directory,', 'but was not at read time for ' + IP + '. Check the regex.');
+	respondTo (response, _500Page, 500, 'text/html', url, IP);
+}
+
+function respondTo (response, content, code, MIME, url, IP) {
+	$nt('Finalizing response for ' + IP + ' for the url: ' + url);
+	response.writeHead (code, {'Content-Type': MIME});
+	response.write (content, function () {$('*** Successfully finished the response for ' + IP + ' with code ' + code + '. ***');});
 }
 
 /* Handle incoming messages from child processes */
@@ -225,7 +232,7 @@ function deRegEx (str) {
 
 
 /* Internal server error page and file/directory reading error names */
-var _500Page = '<DOCTYPE! html>' +
+var _500Page = '<!DOCTYPE html>' +
 '<html>' +
 	'<head>' +
 		'<title>500% Stamina</title>' +

@@ -12,43 +12,29 @@ console.log ('\n"dir_watch.js" child process started! S: ' + S);
 allPaths.sort ();
 process.send (concat (allPaths));
 
-setInterval (function () {
-	var newPaths = bfs (__dirname);
-	newPaths.sort ();
-
-	if (newPaths.length !== allPaths.length) {
-		console.log ('lengths don\'t match!: ' + newPaths.length + ' vs ' + allPaths.length);
-		allPaths = newPaths;
-		process.send (concat (newPaths));
-	} else {
-		for (var i = 0; i < allPaths.length; i++) {
-			if (allPaths[i] !== newPaths[i]) {
-				console.log ('not a match!: ' + allPaths[i] + ' vs ' + newPaths[i]);
-				allPaths = newPaths;
-				process.send (concat (newPaths));
-				break;
-			}
-		}
-	}
-}, SECONDS * 1000);
+setInterval (updatePaths, SECONDS * 1000);
 
 function updatePaths () {
 	var d = bfs (__dirname);
-	d.sort ();
 
+	// Small optimization for speedup
 	d.length !== allPaths.length? _true () : _false ();
 
 	function _true () {allPaths = d; p.send (concat (d));}
-	function _false () {for (var i = 0; i < d.length; i++) if (allPaths[i] !== d[i]) {allPaths = d; p.send (concat (d)); break;}}
+	function _false () {d.sort (); for (var i = 0; i < d.length; i++) if (allPaths[i] !== d[i]) {allPaths = d; p.send (concat (d)); break;}}
 }
 
+/* Called before process.send to process the list of files and directories to avoid blockage in the parent process */
 function concat (array) {
+	// Use a new array to avoid mutation errors that cause the directory to be read at every tick of this function
 	var newArray = [];
-	console.log ('concat called!');
+
+	// Remove the path leading to index.js for easier reading in the parent function
 	for (var i = 0; i < array.length; i++) newArray[i] = array[i].replace (new RegExp ('^' + deRegEx (__dirname)), '').replace (/\\/g, '/');
 	return ['Update Directory', '"' + newArray.join ('" "') + '"'];
 }
 
+/* Recursive breadth-first search that constructs a list of all files relative to __dirname */
 function bfs (dirStr) {
 	var dirs = [dirStr], all = [];
 
@@ -67,6 +53,7 @@ function bfs (dirStr) {
 	return all;
 }
 
+/* Used to cleanly dynamically generate RegEx from a string literal using new RegExp */
 function deRegEx (str) {
 	return str.replace (/\?/g, '\\?')
 		.replace (/\+/g, '\\+')

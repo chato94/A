@@ -1,7 +1,9 @@
 # A[ Server]
 This is a simple static file server powered by Node.js. It is highly, highly *not* 
 recommended to replace `Express` for this, as `Express` has a much wider range of
-support. This is more for personal usage on a home network.
+support. This is more for personal usage on a home network. Note that development
+of this static file server is still not yet complete. There are many functions left
+to write for basic functionality, and many more still for robust features.
 
 ## Summary
 It is the refactored<sup>2</sup> version of A Server 3.1, which was coded using Dropbox

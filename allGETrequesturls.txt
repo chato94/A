@@ -1,0 +1,22 @@
+All possible GET request types:
+
+	/CORRECT/DIR/FROM/SERVER/DIR/BUT/NO/FILE/AND/HAS/INDEX_HTML/
+	/CORRECT/DIR/FROM/SERVER/DIR/BUT/NO/FILE/AND/NOT/HAS/INDEX_HTML/
+
+
+	/CORRECT/DIR/LEADING/TO/FILE/AND/CONTAINS/index.html
+	/CORRECT/DIR/LEADING/TO/FILE/AND/CONTAINS/\w*\.html
+	/CORRECT/DIR/LEADING/TO/FILE/AND/CONTAINS/\w*\.\w+
+
+	/CORRECT/DIR/LEADING/TO/FILE/AND/NOT/CONTAINS/index.html
+	/CORRECT/DIR/LEADING/TO/FILE/AND/NOT/CONTAINS/\w*\.html
+	/CORRECT/DIR/LEADING/TO/FILE/AND/NOT/CONTAINS/\w*\.\w+
+
+	/correct/subdir/but/missing/parent/index.html
+	/correct/subdir/but/missing/parent/\w*\.html
+	/correct/subdir/but/missing/parent/\w*\.\w+
+
+	/NONEXISTENT/DIR
+	/NONEXISTENT/DIR/index.html
+	/NONEXISTENT/DIR/\w*\.html
+	/NONEXISTENT/DIR/\w*\.\w+

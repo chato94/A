@@ -21,3 +21,17 @@ All possible GET request types:
 		/NONEXISTENT/DIR/index.html
 		/NONEXISTENT/DIR/\w*\.html
 		/NONEXISTENT/DIR/\w*\.\w+
+
+
+List of valid encodings for Node.js:
+	* 'hex'
+	* 'utf8'
+	* 'utf-8'
+	* 'ascii'
+	* 'binary'
+	* 'base64'
+	* 'ucs2'
+	* 'ucs-2'
+	* 'utf16le'
+	* 'utf-16le'
+	* 'raw'

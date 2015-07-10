@@ -1,6 +1,6 @@
 /* Required Node.js modules and variables for static file serving */
-var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process'), server;
-var SERVER_IP = (function () {var nI = require ('os').networkInterfaces (), i, a; for (var p in nI) {i = nI[p]; for (var j = 0; j < i.length; j++) {a = i[j]; if (a.family === 'IPv4' && a.address !== '127.0.0.1' && !a.internal) return a.address;}} return '0.0.0.0';})(), PORT = 80, BACKLOG = 511;
+var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process'), I = require ('os').networkInterfaces (), server;
+var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, F = 'IPv4', L = '127.0.0.1', Z = '0.0.0.0';
 
 /* Error code variable aliases */
 var DNE = 'ENOENT', ISDIR = 'EISDIR', NOTDIR = 'ENOTDIR';
@@ -38,23 +38,24 @@ function POSTHandler (request, response, IP) {
 
 /* Root function of the GET request handling function tree */
 function GETHandler (request, response, IP) {
-	var url = decodeURL (request.url), FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY');
-	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE: ' + FILE, 'DIRECTORY: ' + DIRECTORY);
-	rootDir.match (FILE) || rootDir.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : urlDoesNotMatch (url, response, IP) ;
+	var url = decodeURL (request.url), FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
+	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY);
+	rootDir.match (FILE) || rootDir.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP) ;
 }
 
 function urlMatchesDir (url, response, IP, FILE) {
-	$nt('The url "' + url + '"matches to a file in the current directory!');
-	rootDir.match (FILE)? url.match (/\.html$/)? setMap (url, IP, true) : read (url, response, IP) : setMap (url, IP, false);
+	$nt('The url "' + url + '" matches to a file in the current directory!');
+	rootDir.match (FILE)? url.match (/\.html$/)? setMap (url, IP, true) : read (url, response, IP, false) : setMap (url, IP, false);
 }
 
-function urlDoesNotMatch (url, response, IP) {
+function rawURLDoesNotMatch (url, response, IP) {
 	
 }
 
-function read (url, response, IP) {
-	fs.readFile (url, function (error, content) {
-		error? send404 (url, response, IP) : respondTo (response, content, 200, MIMEType (path.basename (url)), url, IP);
+function read (route, response, IP, merge) {
+	var url = merge? mergeMapAndURL (route, IP) : route;
+	fs.readFile (route, function (error, content) {
+		error? send404 (route, response, IP) : respondTo (response, content, 200, MIMEType (path.basename (route)), route, IP);
 	});
 }
 
@@ -64,7 +65,7 @@ function send404 (url, response, IP) {
 }
 
 function send500 (url, response, IP) {
-	$nt('The url "' + url + '" was guaranteed to be in the directory,', 'but was not at read time for ' + IP + '. Check the regex.');
+	$nt('The url "' + url + '" was originally in the directory,', 'but was not at read time for ' + IP + '.');
 	respondTo (response, _500Page, 500, 'text/html', url, IP);
 }
 
@@ -75,6 +76,7 @@ function respondTo (response, content, code, MIME, url, IP) {
 }
 
 /* Handle incoming messages from child processes */
+var retryMap = {};
 dirWatcher.on ('message', function (m) {
 	switch (m[0]) {
 		case 'Update Directory':
@@ -98,7 +100,9 @@ function killChildrenAndExit () {
  */
 /* Sets the global map for the client */
 function setMap (url, IP, useDirname) {
-	cMP[IP] = '.' + useDirname? path.dirname (url) : url;
+	var newMap = '.' + useDirname? path.dirname (url) : url;
+	$nt('Re-mapping ' + IP + ' from "' + cMP[IP] + '" to "' + newMap + '"');
+	cMP[IP] = newMap;
 }
 
 /* console.log alias functions */
@@ -255,3 +259,12 @@ var _500Page = '<!DOCTYPE html>' +
 		'</p>' +
 	'</body>' +
 '</html>';
+
+/* Gets the IP address of the machine that the server is running on */
+function localIPAddress () {
+	var p, a, i, j;
+	for (p in I) {
+		i = I[p];
+		for (j = 0; j < i.length; j++) if (a = i[j], a.family === F && a.address !== L && !a.internal) return a.address;
+	} return Z;
+}

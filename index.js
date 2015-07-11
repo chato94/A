@@ -1,5 +1,6 @@
 /* Required Node.js modules and variables for static file serving */
-var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process'), I = require ('os').networkInterfaces (), server;
+var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process');
+var I = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
 var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, F = 'IPv4', L = '127.0.0.1', Z = '0.0.0.0';
 
 /* Error code variable aliases */
@@ -9,24 +10,24 @@ var DNE = 'ENOENT', ISDIR = 'EISDIR', NOTDIR = 'ENOTDIR';
 var dirWatcher = cp.fork (__dirname + '/dir_watch.js');
 
 /* All available files and directories relative to this file */
-var rootDir = '""', receivedInit = false;
+var root = '""', receivedInit = false;
 
-/* Client Page Map --> Keeps track of the page that users are on when the request does not concatenate the root to the URL */
-var cMP = {};
+/* Client Page Map --> Keeps track of the page that users are on when the request URL does not directly match a root path */
+var cPM = {};
 
 /* Wait until first update of directories to start serving files */
 var start = setInterval (function () {
 	if (receivedInit) server = http.createServer (serverHandler).listen (PORT, SERVER_IP, BACKLOG, function () {
 		$('** The server is up and running! Listening to requests on port ' + PORT + ' at ' + SERVER_IP + ' **\n');
-		clearTimeout (start);
+		clearInterval (start);
 	});
 }, 500);
 
 /* Function from which all other callbacks execute */
-function serverHandler (request, response) {
-	var IP = request.headers['x-forwarded-for'] || request.connection.remoteAddress || request.socket.remoteAddress || request.connection.socket.remoteAddress;
+function serverHandler (rq, rs) {
+	var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress;
 	$('*** Incoming request heard! Initializing response for ' + IP + ' ***');
-	request.method === 'GET'? GETHandler (request, response, IP) : POSTHandler (request, response, IP);
+	rq.method === 'GET'? GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
 }
 
 /* Root function of the POST request handling function tree */
@@ -38,14 +39,15 @@ function POSTHandler (request, response, IP) {
 
 /* Root function of the GET request handling function tree */
 function GETHandler (request, response, IP) {
-	var url = decodeURL (request.url), FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
+	var url = decodeURL (request.url),
+	FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
 	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY);
-	rootDir.match (FILE) || rootDir.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP) ;
+	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP) ;
 }
 
 function urlMatchesDir (url, response, IP, FILE) {
 	$nt('The url "' + url + '" matches to a file in the current directory!');
-	rootDir.match (FILE)? url.match (/\.html$/)? setMap (url, IP, true) : read (url, response, IP, false) : setMap (url, IP, false);
+	root.match (FILE)? url.match (/\.html$/)? setMap (url, IP, true) : read (url, response, IP, false) : setMap (url, IP, false);
 }
 
 function rawURLDoesNotMatch (url, response, IP) {
@@ -81,7 +83,7 @@ dirWatcher.on ('message', function (m) {
 	switch (m[0]) {
 		case 'Update Directory':
 			if (!receivedInit) receivedInit = true;
-			rootDir = m[1];
+			root = m[1];
 			break;
 	}
 });
@@ -101,8 +103,8 @@ function killChildrenAndExit () {
 /* Sets the global map for the client */
 function setMap (url, IP, useDirname) {
 	var newMap = '.' + useDirname? path.dirname (url) : url;
-	$nt('Re-mapping ' + IP + ' from "' + cMP[IP] + '" to "' + newMap + '"');
-	cMP[IP] = newMap;
+	$nt('Re-mapping ' + IP + ' from "' + cPM[IP] + '" to "' + newMap + '"');
+	cPM[IP] = newMap;
 }
 
 /* console.log alias functions */

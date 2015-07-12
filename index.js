@@ -3,9 +3,6 @@ var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = 
 var I = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
 var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, F = 'IPv4', L = '127.0.0.1', Z = '0.0.0.0';
 
-/* Error code variable aliases */
-var DNE = 'ENOENT', ISDIR = 'EISDIR', NOTDIR = 'ENOTDIR';
-
 /* Fork all necessary child processes */
 var dirWatcher = cp.fork (__dirname + '/dir_watch.js');
 
@@ -16,12 +13,15 @@ var root = '""', receivedInit = false;
 var cPM = {};
 
 /* Wait until first update of directories to start serving files */
-var start = setInterval (function () {
-	if (receivedInit) server = http.createServer (serverHandler).listen (PORT, SERVER_IP, BACKLOG, function () {
-		$('** The server is up and running! Listening to requests on port ' + PORT + ' at ' + SERVER_IP + ' **\n');
-		clearInterval (start);
-	});
+var int = setInterval (function () {
+	if (receivedInit) server = http.createServer (serverHandler).listen (PORT, SERVER_IP, BACKLOG, initServer);
 }, 500);
+
+/* Server initialization function */
+function initServer () {
+	$('** The server is up and running! Listening to requests at ' + SERVER_IP + ' on port ' + PORT + ' **\n');
+	clearInterval (int);
+}
 
 /* Function from which all other callbacks execute */
 function serverHandler (rq, rs) {
@@ -42,7 +42,7 @@ function GETHandler (request, response, IP) {
 	var url = decodeURL (request.url),
 	FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
 	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY);
-	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP) ;
+	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP);
 }
 
 function urlMatchesDir (url, response, IP, FILE) {
@@ -56,6 +56,7 @@ function rawURLDoesNotMatch (url, response, IP) {
 
 function read (route, response, IP, merge) {
 	var url = merge? mergeMapAndURL (route, IP) : route;
+	$nt('Attempting to read the file in the url "' + route + '" for ' + IP, IP + ') merge: ' + merge);
 	fs.readFile (route, function (error, content) {
 		error? send404 (route, response, IP) : respondTo (response, content, 200, MIMEType (path.basename (route)), route, IP);
 	});
@@ -105,6 +106,10 @@ function setMap (url, IP, useDirname) {
 	var newMap = '.' + useDirname? path.dirname (url) : url;
 	$nt('Re-mapping ' + IP + ' from "' + cPM[IP] + '" to "' + newMap + '"');
 	cPM[IP] = newMap;
+}
+
+function mergeMapAndURL (url, IP) {
+
 }
 
 /* console.log alias functions */

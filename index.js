@@ -55,7 +55,7 @@ function rawURLDoesNotMatch (url, response, IP) {
 }
 
 function read (route, response, IP, merge) {
-	var url = merge? mergeMapAndURL (route, IP) : route;
+	var url = '.' + merge? mergeMapAndURL (route, IP) : route;
 	$nt('Attempting to read the file in the url "' + route + '" for ' + IP, IP + ') merge: ' + merge);
 	fs.readFile (route, function (error, content) {
 		error? send404 (route, response, IP) : respondTo (response, content, 200, MIMEType (path.basename (route)), route, IP);
@@ -103,13 +103,13 @@ function killChildrenAndExit () {
  */
 /* Sets the global map for the client */
 function setMap (url, IP, useDirname) {
-	var newMap = '.' + useDirname? path.dirname (url) : url;
+	var newMap = useDirname? path.dirname (url) : url;
 	$nt('Re-mapping ' + IP + ' from "' + cPM[IP] + '" to "' + newMap + '"');
 	cPM[IP] = newMap;
 }
 
 function mergeMapAndURL (url, IP) {
-
+	return cPM[IP] + '/' + url;
 }
 
 /* console.log alias functions */

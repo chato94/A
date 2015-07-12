@@ -36,11 +36,11 @@ function concat (array) {
 
 /* Recursive breadth-first search that constructs a list of all files relative to __dirname */
 function bfs (dirStr) {
-	var dirs = [dirStr], all = [];
+	var dirs = [dirStr], all = [], dir;
 
 	function bfsWorker (path) {
 		try {
-			var dir = fs.readdirSync (path);
+			dir = fs.readdirSync (path);
 			dir.length? (function () {for (var i = 0; i < dir.length; i++) dirs.push (path + S + dir[i]);})() : all.push (path + ':DIRECTORY');
 		} catch (error) {
 			error.code === 'ENOTDIR'? all.push (path + ':FILE') : console.log ('UNKNOWN ERROR OCCURRED:\n' + error + '\n');

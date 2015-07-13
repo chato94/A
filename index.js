@@ -57,13 +57,14 @@ function rawURLDoesNotMatch (route, response, IP) {
 	FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
 	root.match (FILE)? url.match (/\.html$/)? next (true) : read (url, response, IP, false) : root.match (DIRECTORY)? _() : send404 (url, response, IP);
 
-	// Internal helper function
+	// Internal helper functions
 	function _() {
-		var I = new RegExp ('"' + deRegEx (url) + '\\/index' + q), H = new RegExp ('"' + deRegEx (url) + '\\/.*' + q);
-		root.match (I)?  : ;
+		$t('');
+		var I = new RegExp ('"' + deRegEx (url) + '\\/index' + q), H = root.match (new RegExp ('"' + deRegEx (url) + '\\/.*' + q));
+		root.match (I)? next (false, url + '/index.html') : H? next (false, H[0].replace (/^"|:FILE"$/g, '')) : send404 (url, response, IP);
 	}
 
-	function next (mapArg) {setMap (url, IP, mapArg); read (url, response, IP, false);}
+	function next (mapArg, file) {var u = file? file : url; setMap (u, IP, mapArg); read (u, response, IP, false);}
 }
 
 function matchOrErr (url, response, IP, merge) {
@@ -81,6 +82,7 @@ function read (route, response, IP, merge) {
 function send404 (url, response, IP) {
 	$nt('There was a problem reading "' + url + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
 	setMap ('/404', IP, false);
+	// TODO: Finish this function
 }
 
 function send500 (url, response, IP) {

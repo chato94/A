@@ -1,6 +1,6 @@
 /* Required Node.js modules and variables for static file serving */
 var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process');
-var I = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
+var Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
 var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, F = 'IPv4', L = '127.0.0.1', Z = '0.0.0.0';
 
 /* Fork all necessary child processes */
@@ -13,18 +13,16 @@ var root = '""', receivedInit = false;
 var cPM = {};
 
 /* Wait until first update of directories to start serving files */
-var int = setInterval (function () {
-	if (receivedInit) server = http.createServer (serverHandler).listen (PORT, SERVER_IP, BACKLOG, initServer);
-}, 500);
+var int = setInterval (function () {if (receivedInit) server = http.createServer (topHandler).listen (PORT, SERVER_IP, BACKLOG, iS);}, 500);
 
 /* Server initialization function */
-function initServer () {
+function iS () {
 	$('** The server is up and running! Listening to requests at ' + SERVER_IP + ' on port ' + PORT + ' **\n');
 	clearInterval (int);
 }
 
 /* Function from which all other callbacks execute */
-function serverHandler (rq, rs) {
+function topHandler (rq, rs) {
 	var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress;
 	$('*** Incoming request heard! Initializing response for ' + IP + ' ***');
 	rq.method === 'GET'? GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
@@ -42,16 +40,34 @@ function GETHandler (request, response, IP) {
 	var url = decodeURL (request.url),
 	FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
 	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY);
-	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP);
+	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP, FILE);
 }
 
 function urlMatchesDir (url, response, IP, FILE) {
 	$nt('The url "' + url + '" matches to a file in the current directory!');
-	root.match (FILE)? url.match (/\.html$/)? setMap (url, IP, true) : read (url, response, IP, false) : setMap (url, IP, false);
+	root.match (FILE)? url.match (/\.html$/)? next (true) : read (url, response, IP, false) : next (false);
+	
+	// Internal helper function
+	function next (mapArg) {setMap (url, IP, mapArg); read (url, response, IP, false);}
 }
 
-function rawURLDoesNotMatch (url, response, IP) {
-	
+function rawURLDoesNotMatch (route, response, IP) {
+	$nt('The url "' + route + '" does not match a file in the current directory!', 'Attempting to merge and match for ' + IP);
+	var url = mergeMapAndURL (route, IP), q = '\\.html:FILE"',
+	FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
+	root.match (FILE)? url.match (/\.html$/)? next (true) : read (url, response, IP, false) : root.match (DIRECTORY)? _() : send404 (url, response, IP);
+
+	// Internal helper function
+	function _() {
+		var I = new RegExp ('"' + deRegEx (url) + '\\/index' + q), H = new RegExp ('"' + deRegEx (url) + '\\/.*' + q);
+		root.match (I)?  : ;
+	}
+
+	function next (mapArg) {setMap (url, IP, mapArg); read (url, response, IP, false);}
+}
+
+function matchOrErr (url, response, IP, merge) {
+
 }
 
 function read (route, response, IP, merge) {
@@ -81,11 +97,9 @@ function respondTo (response, content, code, MIME, url, IP) {
 /* Handle incoming messages from child processes */
 var retryMap = {};
 dirWatcher.on ('message', function (m) {
-	switch (m[0]) {
-		case 'Update Directory':
-			if (!receivedInit) receivedInit = true;
-			root = m[1];
-			break;
+	if (m[0] === 'Update Directory') {
+		if (!receivedInit) receivedInit = true;
+		root = m[1];
 	}
 });
 
@@ -95,6 +109,7 @@ process.on ('exit', killChildrenAndExit);
 
 function killChildrenAndExit () {
 	dirWatcher.kill ();
+	$n('CLEANLY TERMINATED ALL COMMANDS AND NOW EXITING THE SERVER PROGRAM.');
 	process.exit ();
 }
 
@@ -108,9 +123,7 @@ function setMap (url, IP, useDirname) {
 	cPM[IP] = newMap;
 }
 
-function mergeMapAndURL (url, IP) {
-	return cPM[IP] + '/' + url;
-}
+function mergeMapAndURL (url, IP) {return cPM[IP] + '/' + url;}
 
 /* console.log alias functions */
 var n = '\n', t = '    ', 
@@ -231,7 +244,9 @@ function decodeURL (url) {
 }
 
 function deRegEx (str) {
-	return str.replace (/\?/g, '\\?')
+	return str.replace (/\\/g, '\\\\')
+		.replace (/\//g, '\\/')
+		.replace (/\?/g, '\\?')
 		.replace (/\+/g, '\\+')
 		.replace (/\[/g, '\\[')
 		.replace (/\]/g, '\\]')
@@ -244,10 +259,7 @@ function deRegEx (str) {
 		.replace (/\(/g, '\\(')
 		.replace (/\)/g, '\\)')
 		.replace (/\|/g, '\\|');
-		/*.replace (/\\/g, '\\\\')
-		.replace (/\//g, '\\/')*/
 }
-
 
 /* Internal server error page and file/directory reading error names */
 var _500Page = '<!DOCTYPE html>' +
@@ -270,8 +282,8 @@ var _500Page = '<!DOCTYPE html>' +
 /* Gets the IP address of the machine that the server is running on */
 function localIPAddress () {
 	var p, a, i, j;
-	for (p in I) {
-		i = I[p];
+	for (p in Int) {
+		i = Int[p];
 		for (j = 0; j < i.length; j++) if (a = i[j], a.family === F && a.address !== L && !a.internal) return a.address;
 	} return Z;
 }

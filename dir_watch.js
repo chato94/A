@@ -30,7 +30,7 @@ function concat (array) {
 	var newArray = [];
 
 	// Remove the path leading to index.js for easier reading in the parent function
-	for (var i = 0; i < array.length; i++) newArray[i] = array[i].replace (new RegExp ('^' + deRegEx (__dirname)), '').replace (/\\/g, '/');
+	for (var i = 0; i < array.length; i++) newArray.push (array[i].replace (new RegExp ('^' + deRegEx (__dirname)), '').replace (/\\/g, '/'));
 	return ['Update Directory', '"' + newArray.join ('" "') + '"'];
 }
 
@@ -55,7 +55,9 @@ function bfs (dirStr) {
 
 /* Used to cleanly dynamically generate RegEx from a string literal using new RegExp */
 function deRegEx (str) {
-	return str.replace (/\?/g, '\\?')
+	return str.replace (/\\/g, '\\\\')
+		.replace (/\//g, '\\/')
+		.replace (/\?/g, '\\?')
 		.replace (/\+/g, '\\+')
 		.replace (/\[/g, '\\[')
 		.replace (/\]/g, '\\]')
@@ -68,6 +70,4 @@ function deRegEx (str) {
 		.replace (/\(/g, '\\(')
 		.replace (/\)/g, '\\)')
 		.replace (/\|/g, '\\|');
-		/*.replace (/\\/g, '\\\\')
-		.replace (/\//g, '\\/')*/
 }

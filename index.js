@@ -24,7 +24,7 @@ function iS () {
 /* Function from which all other callbacks execute */
 function topHandler (rq, rs) {
 	var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress;
-	$('*** Incoming request heard! Initializing response for ' + IP + ' ***');
+	$n('*** Incoming request heard! Initializing response for ' + IP + ' ***');
 	rq.method === 'GET'? GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
 }
 
@@ -67,15 +67,11 @@ function rawURLDoesNotMatch (route, response, IP) {
 	function next (mapArg, file) {var u = file? file : url; setMap (u, IP, mapArg); read (u, response, IP, false);}
 }
 
-function matchOrErr (url, response, IP, merge) {
-
-}
-
 function read (route, response, IP, merge) {
-	var url = '.' + merge? mergeMapAndURL (route, IP) : route;
-	$nt('Attempting to read the file in the url "' + route + '" for ' + IP, IP + ') merge: ' + merge);
-	fs.readFile (route, function (error, content) {
-		error? send404 (route, response, IP) : respondTo (response, content, 200, MIMEType (path.basename (route)), route, IP);
+	var url = '.' + (merge? mergeMapAndURL (route, IP) : route);
+	$nt('Attempting to read the file in the url "' + url + '" for ' + IP, IP + ') merge: ' + merge);
+	fs.readFile (url, function (error, content) {
+		error? send404 (url, response, IP) : respondTo (response, content, 200, MIMEType (path.basename (url)), url, IP);
 	});
 }
 
@@ -93,7 +89,7 @@ function send500 (url, response, IP) {
 function respondTo (response, content, code, MIME, url, IP) {
 	$nt('Finalizing response for ' + IP + ' for the url: ' + url);
 	response.writeHead (code, {'Content-Type': MIME});
-	response.write (content, function () {$('*** Successfully finished the response for ' + IP + ' with code ' + code + '. ***');});
+	response.write (content, function () {$('*** Successfully finished the response for ' + IP + ' with code ' + code + '. ***'); response.end ();});
 }
 
 /* Handle incoming messages from child processes */
@@ -102,6 +98,10 @@ dirWatcher.on ('message', function (m) {
 	if (m[0] === 'Update Directory') {
 		if (!receivedInit) receivedInit = true;
 		root = m[1];
+
+		$('Current Directory: ')
+		var match = root.match (/".*?"/g);
+		for (var i = 0; i < match.length; i++) $t(match[i]);
 	}
 });
 
@@ -125,11 +125,11 @@ function setMap (url, IP, useDirname) {
 	cPM[IP] = newMap;
 }
 
-function mergeMapAndURL (url, IP) {return cPM[IP] + '/' + url;}
+function mergeMapAndURL (url, IP) {return cPM[IP] + url;}
 
 /* console.log alias functions */
+function $ (m) {console.log (m);}
 var n = '\n', t = '    ', 
-	$ = function (m) {console.log (m);}, 
 	$n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(n+a[i]);}, 
 	$t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(t+a[i]);}, 
 	$nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(n+t+a[i]) : $(t+a[i]);};
@@ -282,10 +282,28 @@ var _500Page = '<!DOCTYPE html>' +
 '</html>';
 
 /* Gets the IP address of the machine that the server is running on */
+/*function localIPAddress () {
+	var a;
+	for (var p in Int) {
+		var i = Int[p];
+		for (var j = 0; j < i.length; j++) if (a = i[j], a.family === F && a.address !== L && !a.internal) {
+			$('ADDRESS: ' + a .address);
+			return a.address;
+		}
+	} 
+	$('ZERO\'d out...');
+	return Z;
+}*/
+
 function localIPAddress () {
-	var p, a, i, j;
-	for (p in Int) {
-		i = Int[p];
-		for (j = 0; j < i.length; j++) if (a = i[j], a.family === F && a.address !== L && !a.internal) return a.address;
-	} return Z;
+	var interfaces = require ('os').networkInterfaces ();
+	for (var p in interfaces) {
+		var iface = interfaces[p];
+
+		for (var i = 0; i < iface.length; i++) {
+			var alias = iface[i];
+			if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) return alias.address;
+		}
+	}
+	return '0.0.0.0';
 }

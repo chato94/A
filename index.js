@@ -1,13 +1,13 @@
 /* Required Node.js modules and variables for static file serving */
 var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process');
 var Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
-var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, F = 'IPv4', L = '127.0.0.1', Z = '0.0.0.0';
+var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0';
 
 /* Fork all necessary child processes */
 var dirWatcher = cp.fork (__dirname + '/dir_watch.js');
 
 /* All available files and directories relative to this file */
-var root = '""', receivedInit = false;
+var root = '""', e = new ErrorSpace (), receivedInit = false;
 
 /* Client Page Map --> Keeps track of the page that users are on when the request URL does not directly match a root path */
 var cPM = {};
@@ -75,10 +75,11 @@ function read (route, response, IP, merge) {
 	});
 }
 
-function send404 (url, response, IP) {
-	$nt('There was a problem reading "' + url + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
-	setMap ('/404', IP, false);
+function send404 (badURL, response, IP) {
+	$nt('There was a problem reading "' + badURL + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
+	// setMap ('/404', IP, false); -- line is potentially redundant and prone to bugs
 	// TODO: Finish this function
+	var url = e.filter (badURL);
 }
 
 function send500 (url, response, IP) {
@@ -98,16 +99,17 @@ dirWatcher.on ('message', function (m) {
 	if (m[0] === 'Update Directory') {
 		if (!receivedInit) receivedInit = true;
 		root = m[1];
-
-		$('Current Directory: ')
-		var match = root.match (/".*?"/g);
-		for (var i = 0; i < match.length; i++) $t(match[i]);
+		e.update ();
+		/* Used for debugging
+			$('Current Directory: ')
+			var match = root.match (/".*?"/g);
+			for (var i = 0; i < match.length; i++) $t(match[i]);
+		*/
 	}
 });
 
 /* Kill all child processes on exit */
 process.on ('SIGINT', killChildrenAndExit);
-process.on ('exit', killChildrenAndExit);
 
 function killChildrenAndExit () {
 	dirWatcher.kill ();
@@ -115,9 +117,10 @@ function killChildrenAndExit () {
 	process.exit ();
 }
 
-/**
- * Helper functions and aliases
- */
+/************************************************************************************************
+ * THE FOLLOWING FUNCTIONS ARE HELPER FUNCTIONS AND ALIASES FOR REPEATED FUNCTIONS LIKE LOGGING *
+ ************************************************************************************************/
+
 /* Sets the global map for the client */
 function setMap (url, IP, useDirname) {
 	var newMap = useDirname? path.dirname (url) : url;
@@ -125,14 +128,31 @@ function setMap (url, IP, useDirname) {
 	cPM[IP] = newMap;
 }
 
+/* Concatenates the client page map for IP with the requested url */
 function mergeMapAndURL (url, IP) {return cPM[IP] + url;}
+
+/* Handles bad URL error filtering for the 404 page by keeping track of the valid directories */
+function ErrorSpace () {
+
+	function segment (url) {
+
+	}
+
+	this.filter = function (badURL) {
+
+	};
+
+	this.update = function () {
+
+	};
+}
 
 /* console.log alias functions */
 function $ (m) {console.log (m);}
 var n = '\n', t = '    ', 
 	$n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(n+a[i]);}, 
 	$t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(t+a[i]);}, 
-	$nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(n+t+a[i]) : $(t+a[i]);};
+	$nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(t+a[i]) : $(n+t+a[i]);};
 
 /* URL decoding regexes */
 var SPACE = /%20/g, 
@@ -214,6 +234,7 @@ function MIMEType (file) {
 	return extensionMap[extension] || 'text/plain';
 }
 
+/* Converts the URL encoding to the literal string representation */
 function decodeURL (url) {
 	// Convert the initial request into a directory that actually exists
 	var temp = url === '/' || url === '/index.html'? '/init/index.html' : url;
@@ -245,6 +266,7 @@ function decodeURL (url) {
 		.replace (BACKTICK, '`');
 }
 
+/* Lets new RegExp match for the complete literal of the input string */
 function deRegEx (str) {
 	return str.replace (/\\/g, '\\\\')
 		.replace (/\//g, '\\/')
@@ -263,7 +285,7 @@ function deRegEx (str) {
 		.replace (/\|/g, '\\|');
 }
 
-/* Internal server error page and file/directory reading error names */
+/* Internal server error page */
 var _500Page = '<!DOCTYPE html>' +
 '<html>' +
 	'<head>' +
@@ -281,29 +303,13 @@ var _500Page = '<!DOCTYPE html>' +
 	'</body>' +
 '</html>';
 
-/* Gets the IP address of the machine that the server is running on */
-/*function localIPAddress () {
-	var a;
-	for (var p in Int) {
-		var i = Int[p];
-		for (var j = 0; j < i.length; j++) if (a = i[j], a.family === F && a.address !== L && !a.internal) {
-			$('ADDRESS: ' + a .address);
+/* Gets the IPv4 address of the machine running the server */
+function localIPAddress () {
+	var a, i, p, j;
+	for (p in Int) {
+		i = Int[p];
+		for (j = 0; j < i.length; j++) if (a = i[j], a.family === 'IPv4' && a.address !== L && !a.internal) {
 			return a.address;
 		}
-	} 
-	$('ZERO\'d out...');
-	return Z;
-}*/
-
-function localIPAddress () {
-	var interfaces = require ('os').networkInterfaces ();
-	for (var p in interfaces) {
-		var iface = interfaces[p];
-
-		for (var i = 0; i < iface.length; i++) {
-			var alias = iface[i];
-			if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) return alias.address;
-		}
-	}
-	return '0.0.0.0';
+	} return Z;
 }

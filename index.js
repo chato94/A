@@ -7,13 +7,13 @@ var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z 
 var dirWatcher = cp.fork (__dirname + '/dir_watch.js');
 
 /* All available files and directories relative to this file */
-var root = '""', e = new ErrorSpace (), receivedInit = false;
+var root = '""', e = new RootSpace (), receivedInit = false;
 
 /* Client Page Map --> Keeps track of the page that users are on when the request URL does not directly match a root path */
 var cPM = {};
 
 /* Wait until first update of directories to start serving files */
-var int = setInterval (function () {if (receivedInit) server = http.createServer (topHandler).listen (PORT, SERVER_IP, BACKLOG, iS);}, 250);
+var int = setInterval (function () {if (receivedInit) server = http.createServer (fHTTP).listen (PORT, SERVER_IP, BACKLOG, iS);}, 250);
 
 /* Server initialization function */
 function iS () {
@@ -21,8 +21,12 @@ function iS () {
 	clearInterval (int);
 }
 
+/***********************************************************************************************************************
+ * THE FOLLOWING FUNCTIONS ARE THE TREE-LIKE FLOW OF CALLBACKS THAT STEM FROM CLIENT REQUESTS FOR THE SERVER TO HANDLE *
+ ***********************************************************************************************************************/
+
 /* Function from which all other callbacks execute */
-function topHandler (rq, rs) {
+function fHTTP (rq, rs) {
 	var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress;
 	$n('*** Incoming request heard! Initializing response for ' + IP + ' ***');
 	rq.method === 'GET'? GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
@@ -59,7 +63,7 @@ function rawURLDoesNotMatch (route, response, IP) {
 
 	// Used to handle an incoming URL that matches a directory rather than a file. Should never happen, but just in case, it's here
 	function _() {
-		$t('_() was called for ' + IP + ', and it has been determined that', 'dir_watch.js would not match this case. Check the logs.');
+		$t('_(' + IP + ') was called, and it has been determined that', 'dir_watch.js would not match this case.');
 		var I = new RegExp ('"' + deRegEx (url) + '\\/index' + q), H = root.match (new RegExp ('"' + deRegEx (url) + '\\/.*' + q));
 		root.match (I)? next (false, url + '/index.html') : H? next (false, H[0].replace (/^"|:FILE"$/g, '')) : send404 (url, response, IP);
 	}
@@ -94,8 +98,11 @@ function respondTo (response, content, code, MIME, url, IP) {
 	response.write (content, function () {$('*** Successfully finished the response for ' + IP + ' with code ' + code + '. ***'); response.end ();});
 }
 
+/********************************************************************************************************
+ * THE FOLLOWING FUNCTIONS ARE FUNCTIONS THAT HANDLE CHILD PROCESSES AND THE PARENT PROCESS TERMINATION *
+ ********************************************************************************************************/
+
 /* Handle incoming messages from child processes */
-var retryMap = {};
 dirWatcher.on ('message', function (m) {
 	if (m[0] === 'Update Directory') {
 		if (!receivedInit) receivedInit = true;
@@ -129,30 +136,35 @@ function setMap (url, IP, useDirname) {
 function mergeMapAndURL (url, IP) {return cPM[IP] + url;}
 
 /* Handles bad URL error filtering for the 404 page by keeping track of the valid directories */
-function ErrorSpace () {
+function RootSpace () {
 
 	// rgx0 matches all valid /404 dirs from root, rgx1 splits paths and URLs into segments
-	var rgx0 = /"\/404.*?"/g, rgx1 = /\/[^/]+/g, errorDirs = root.match (rgx0) || [];
+	var rgx1 = /\/[^/]+/g;
 
 	// Splits a URL or a path into an array of forwardslash-name segments
-	function segment (url) {return url.match (rgx1) || [];}
+	function segment (url) {
+		var m = url.match (rgx1) || [];
+		return m.length? (function () {var l = m.length-1; m[l] = m[l].replace (/^"|:FILE"$|:DIRECTORY"$/g, ''); return m;})() : m;
+	}
 
 	// Returns the longest string in the input array
 	function longest (a) {var s = ''; for (var i = 0; i < a.length; i++) if (a[i].length > s.length) s = a[i]; return s;}
 
-	this.filter = function (badURL) {
-		var broke = false, matches = [], concat = '', badSegs = segment (badURL), k0 = badSegs.length - 1, k = k0, errorSegs, j;
+	// Searches root for the top folder defined by rgx and returns the longest match found
+	function matchWorker (url, rgx) {
+		var matchDirs = root.match (rgx) || [];
+		var broke = false, matches = [], concat = '', urlSegs = segment (url), k0 = urlSegs.length - 1, k = k0, segs, j;
 
-		// Iterates through each /404 directory to match the bad URL segments from basename to rootname
-		for (var i = 0; i < errorDirs.length; i++) {
+		// Iterates through each specified top directory to match the bad URL segments from basename to rootname
+		for (var i = 0; i < matchDirs.length; i++) {
 
-			errorSegs = segment (errorDirs[i]);
-			j = errorSegs.length - 1;
+			segs = segment (matchDirs[i]);
+			j = segs.length - 1;
 
 			// Iterates through each /... segment of the directory and bad URL and joins the result in concat
 			while (j >= 0) {
-				if (k >= 0 && errorSegs[j] === badSegs[k]) {
-					concat = badSegs[k] + concat;
+				if (k >= 0 && segs[j] === urlSegs[k]) {
+					concat = urlSegs[k] + concat;
 					k--;
 				} else {
 					k = k0;
@@ -169,10 +181,14 @@ function ErrorSpace () {
 		return longest (matches);
 	};
 
+	this.filter = function (badURL) {
+		var longestMatch = '/404' + matchWorker (badURL, /"\/404.*?"/g), rgx = new RegExp (deRegEx ('"' + longestMatch + ':FILE"'));
+		return root.match (rgx)? root.match (rgx)[0] : '/404/index.html';
+	}
+
 	// Used to update the internal array of all /404 directories, and to log that child process has updated root
 	this.update = function () {
 		$n('################################# UPDATED ROOT #################################\n');
-		errorDirs = root.match (rgx0);
 	};
 }
 

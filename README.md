@@ -22,7 +22,7 @@ website that I developed mainly to learn JavaScript, but also to debug JavaScrip
 with the hopes of being a great tool to use to host pages for any purpose necessary on a home
 network as an intranet. As described in the intro, I am also hoping to add database support,
 maybe not necessarily through SQL or any variation of that. I have already implemented the 
-SHA-256 algorithm in JavaScript (mostly for learningpurposes because Node.js already comes with
+SHA-256 algorithm in JavaScript (mostly for learning purposes because Node.js already comes with
 a more fully equiped `crypto` library), so at least a small amount of security will be possible.
 In **A Server 2.0**, security had to be done from the client side, which resulted in slow 
 processing. This can be fixed by using HTTPS instead, but then it wouldn't be free `:P`.

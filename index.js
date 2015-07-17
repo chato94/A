@@ -82,13 +82,11 @@ function read (route, response, IP, merge) {
 
 function send404 (badURL, response, IP) {
 	$nt('There was a problem reading "' + badURL + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
-	// setMap ('/404', IP, false); -- line is potentially redundant and prone to bugs
-	// TODO: Finish this function
-	var url = e.filter (badURL);
+	read (e.filter (badURL, response, IP), response, IP, false);
 }
 
 function send500 (url, response, IP) {
-	$nt('The url "' + url + '" was originally in the directory,', 'but was not at read time for ' + IP + '.');
+	$nt('The url "' + url + '" was either originally in the directory', 'but not at read time, or never exited for ' + IP + '.');
 	respondTo (response, _500Page, 500, 'text/html', url, IP);
 }
 
@@ -133,7 +131,7 @@ function setMap (url, IP, useDirname) {
 }
 
 /* Concatenates the client page map for IP with the requested url */
-function mergeMapAndURL (url, IP) {return cPM[IP] + url;}
+function mergeMapAndURL (url, IP) {return cPM[IP]? cPM[IP] + url : url;}
 
 /* Handles bad URL error filtering for the 404 page by keeping track of the valid directories */
 function RootSpace () {
@@ -181,9 +179,9 @@ function RootSpace () {
 		return longest (matches);
 	};
 
-	this.filter = function (badURL) {
+	this.filter = function (badURL, response, IP) {
 		var longestMatch = '/404' + matchWorker (badURL, /"\/404.*?"/g), rgx = new RegExp (deRegEx ('"' + longestMatch + ':FILE"'));
-		return root.match (rgx)? root.match (rgx)[0] : '/404/index.html';
+		return root.match (rgx)? root.match (rgx)[0] : root.match (/"\/404\/index\.html:FILE"/)? '/404/index.html' : send500 (badURL, response, IP);
 	}
 
 	// Used to update the internal array of all /404 directories, and to log that child process has updated root

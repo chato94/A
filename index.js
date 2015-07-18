@@ -23,6 +23,17 @@ function iS () {
 	clearInterval (int);
 }
 
+/* Gets the IPv4 address of the machine running the server */
+function localIPAddress () {
+	var a, i, p, j;
+	for (p in Int) {
+		i = Int[p];
+		for (j = 0; j < i.length; j++) if (a = i[j], a.family === 'IPv4' && a.address !== L && !a.internal) {
+			return a.address;
+		}
+	} return Z;
+}
+
 /***********************************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE THE TREE-LIKE FLOW OF CALLBACKS THAT STEM FROM CLIENT REQUESTS FOR THE SERVER TO HANDLE *
  ***********************************************************************************************************************/
@@ -125,7 +136,6 @@ function killChildrenAndExit () {
 /************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE HELPER FUNCTIONS AND ALIASES FOR REPEATED FUNCTIONS LIKE LOGGING *
  ************************************************************************************************/
-
 /* Sets the global map for the client */
 function setMap (url, IP, useDirname) {
 	var newMap = useDirname? path.dirname (url) : url;
@@ -200,34 +210,6 @@ var n = '\n', t = '    ',
 	$t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(t+a[i]);}, 
 	$nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(t+a[i]) : $(n+t+a[i]);};
 
-/* URL decoding regexes */
-var SPACE = /%20/g, 
-	NEWLINE = /%0A/g, 
-	AT = /%40/g, 
-	HASHTAG = /%23/g, 
-	DOLLAR = /%24/g, 
-	PERCENT = /%25/g, 
-	CARROT = /%5E/g, 
-	AMPERSAND = /%26/g, 
-	PLUS = /%2B/g, 
-	EQUALS = /%3D/g, 
-	OPENBRACE = /%7B/g, 
-	CLOSEBRACE = /%7D/g, 
-	OPENBRACKET = /%5B/g, 
-	CLOSEBRACKET = /%5D/g, 
-	PIPE = /%7C/g, 
-	BACKSLASH = /%5C/g, 
-	FORWARDSLASH = /%2F/g, 
-	COLON = /%3A/g, 
-	SEMICOLON = /%3B/g, 
-	DOUBLEQUOTE = /%22/g, 
-	SINGLEQUOTE = /%27/g, 
-	LESSTHAN = /%3C/g, 
-	GREATERTHAN = /%3E/g, 
-	COMMA = /%2C/g, 
-	QUESTIONMARK = /%3F/g, 
-	BACKTICK = /%60/g;
-
 /* Utilizes the comprehensive extension map to return the appropriate MIME type of a file */
 function MIMEType (file) {
 	var ext = /\..+$/, extension = file.match (ext)? file.match (ext)[0] : 'dne';
@@ -285,16 +267,36 @@ function deRegEx (str) {
 		.replace (/\|/g, '\\|');
 }
 
-/* Gets the IPv4 address of the machine running the server */
-function localIPAddress () {
-	var a, i, p, j;
-	for (p in Int) {
-		i = Int[p];
-		for (j = 0; j < i.length; j++) if (a = i[j], a.family === 'IPv4' && a.address !== L && !a.internal) {
-			return a.address;
-		}
-	} return Z;
-}
+/*********************************************************************************************************************************
+ * THE FOLLOWING ARE GLOBAL VARIABLES THAT WOULD BE TOO LARGE TO FIT ON A SINGLE LINE AND COULD POTENTIALLY BE ON THEIR OWN FILE *
+ *********************************************************************************************************************************/
+/* URL decoding regexes */
+var SPACE = /%20/g, 
+	NEWLINE = /%0A/g, 
+	AT = /%40/g, 
+	HASHTAG = /%23/g, 
+	DOLLAR = /%24/g, 
+	PERCENT = /%25/g, 
+	CARROT = /%5E/g, 
+	AMPERSAND = /%26/g, 
+	PLUS = /%2B/g, 
+	EQUALS = /%3D/g, 
+	OPENBRACE = /%7B/g, 
+	CLOSEBRACE = /%7D/g, 
+	OPENBRACKET = /%5B/g, 
+	CLOSEBRACKET = /%5D/g, 
+	PIPE = /%7C/g, 
+	BACKSLASH = /%5C/g, 
+	FORWARDSLASH = /%2F/g, 
+	COLON = /%3A/g, 
+	SEMICOLON = /%3B/g, 
+	DOUBLEQUOTE = /%22/g, 
+	SINGLEQUOTE = /%27/g, 
+	LESSTHAN = /%3C/g, 
+	GREATERTHAN = /%3E/g, 
+	COMMA = /%2C/g, 
+	QUESTIONMARK = /%3F/g, 
+	BACKTICK = /%60/g;
 
 /* Internal server error page */
 var _500Page = '<!DOCTYPE html>' +

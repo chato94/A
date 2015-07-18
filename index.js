@@ -1,4 +1,6 @@
-/* Required Node.js modules and variables for static file serving */
+/*********************************************************************************************
+ * THE FOLLOWING ARE REQUIRED Node.js LIBRARIES AND GLOBAL VARIABLES FOR STATIC FILE SERVING *
+ *********************************************************************************************/
 var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process');
 var Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
 var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0';
@@ -24,11 +26,10 @@ function iS () {
 /***********************************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE THE TREE-LIKE FLOW OF CALLBACKS THAT STEM FROM CLIENT REQUESTS FOR THE SERVER TO HANDLE *
  ***********************************************************************************************************************/
-
 /* Function from which all other callbacks execute */
 function fHTTP (rq, rs) {
 	var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress;
-	$n('*** Incoming request heard! Initializing response for ' + IP + ' ***');
+	$n('*** fHTTP - Incoming request heard! Initializing response for ' + IP + ' ***');
 	rq.method === 'GET'? GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
 }
 
@@ -36,30 +37,30 @@ function fHTTP (rq, rs) {
 function POSTHandler (request, response, IP) {
 	var html = '<!DOCTYPE html><html><h2>POST Request Heard!</h2><p>Stay tuned for more later.</p></html>';
 	$nt('POST Methods are coming soon. Sending an HTML response for now to ' + IP);
-	respondTo (response, html, 200, 'text/html', 'POST Method', IP);
+	respondTo ('POST Method', response, IP, html, 200, 'text/html');
 }
 
 /* Root function of the GET request handling function tree */
 function GETHandler (request, response, IP) {
 	var url = decodeURL (request.url),
 	FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
-	$nt('Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY);
+	$nt('GETHandler - Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY);
 	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP, FILE);
 }
 
 function urlMatchesDir (url, response, IP, FILE) {
-	$nt('The url "' + url + '" matches to a file in the current directory!');
+	$nt('urlMatchesDir - The url "' + url + '" matches to a file in the current directory!');
 	root.match (FILE)? url.match (/\.html$/)? next (true) : read (url, response, IP, false) : next (false);
 	
 	// Sets the client page map for potential dependency concatenation, then reads the file from storage
 	function next (mapArg) {setMap (url, IP, mapArg); read (url, response, IP, false);}
 }
 
-function rawURLDoesNotMatch (route, response, IP) {
-	$nt('The url "' + route + '" does not match a file in the current directory!', 'Attempting to merge and match for ' + IP);
-	var url = mergeMapAndURL (route, IP), q = '\\.html:FILE"',
-	FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
-	root.match (FILE)? url.match (/\.html$/)? next (true) : read (url, response, IP, false) : root.match (DIRECTORY)? _() : send404 (url, response, IP);
+function rawURLDoesNotMatch (route, rs, IP) {
+	$nt('rawURLDoesNotMatch - The url "' + route + '" does not match a file in the current directory!', 'Attempting to merge and match for ' + IP);
+	var url = mergeMapAndURL (route, IP), q = '\\.html:FILE"', r = root,
+	FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIR = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
+	r.match (FILE)? url.match (/\.html$/)? next (true) : read (url, rs, IP, false) : r.match (DIR)? _() : send404 (url, rs, IP);
 
 	// Used to handle an incoming URL that matches a directory rather than a file. Should never happen, but just in case, it's here
 	function _() {
@@ -72,26 +73,27 @@ function rawURLDoesNotMatch (route, response, IP) {
 	function next (mapArg, file) {var u = file? file : url; setMap (u, IP, mapArg); read (u, response, IP, false);}
 }
 
-function read (route, response, IP, merge) {
+function read (route, response, IP, merge, callback) {
 	var url = '.' + (merge? mergeMapAndURL (route, IP) : route);
-	$nt('Attempting to read the file in the url "' + url + '" for ' + IP, IP + ') merge: ' + merge);
+	$nt('read - Attempting to read the file in the url "' + url + '" for ' + IP, IP + ') merge: ' + merge);
+	if (!callback) callback = respondTo;
 	fs.readFile (url, function (error, content) {
-		error? send404 (url, response, IP) : respondTo (response, content, 200, MIMEType (path.basename (url)), url, IP);
+		error? send404 (url, response, IP) : callback (url, response, IP, content, 200, MIMEType (path.basename (url)));
 	});
 }
 
 function send404 (badURL, response, IP) {
-	$nt('There was a problem reading "' + badURL + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
-	read (e.filter (badURL, response, IP), response, IP, false);
+	$nt('send404 - There was a problem reading "' + badURL + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
+	read (e.filter (badURL, response, IP), response, IP, false, function () {$n('THE 500 PAGE HAS ALREADY BEEN HANDLED BY ROOTSPACE.');});
 }
 
 function send500 (url, response, IP) {
-	$nt('The url "' + url + '" was either originally in the directory', 'but not at read time, or never exited for ' + IP + '.');
-	respondTo (response, _500Page, 500, 'text/html', url, IP);
+	$nt('send500 - The url "' + url + '" was either originally in the directory', 'but not at read time, or never exited for ' + IP + '.');
+	respondTo (url, response, IP, _500Page, 500, 'text/html');
 }
 
-function respondTo (response, content, code, MIME, url, IP) {
-	$nt('Finalizing response for ' + IP + ' for the url: ' + url);
+function respondTo (url, response, IP, content, code, MIME) {
+	$nt('respondTo - Finalizing response for ' + IP + ' for the url: ' + url);
 	response.writeHead (code, {'Content-Type': MIME});
 	response.write (content, function () {$('*** Successfully finished the response for ' + IP + ' with code ' + code + '. ***'); response.end ();});
 }
@@ -99,7 +101,6 @@ function respondTo (response, content, code, MIME, url, IP) {
 /********************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE FUNCTIONS THAT HANDLE CHILD PROCESSES AND THE PARENT PROCESS TERMINATION *
  ********************************************************************************************************/
-
 /* Handle incoming messages from child processes */
 dirWatcher.on ('message', function (m) {
 	if (m[0] === 'Update Directory') {

@@ -84,12 +84,14 @@ function read (route, response, IP, merge, callback) {
 
 function send404 (badURL, response, IP) {
 	$nt('send404 - There was a problem reading "' + badURL + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
-	read (e.filter (badURL, response, IP), response, IP, false, function () {$n('THE 500 PAGE HAS ALREADY BEEN HANDLED BY ROOTSPACE.');});
+	var url = e.filter (badURL, response, IP);
+	url? read (url, response, IP, false, function () {$n('THE 500 PAGE HAS ALREADY BEEN HANDLED BY ROOTSPACE.');}) : null;
 }
 
 function send500 (url, response, IP) {
 	$nt('send500 - The url "' + url + '" was either originally in the directory', 'but not at read time, or never exited for ' + IP + '.');
 	respondTo (url, response, IP, _500Page, 500, 'text/html');
+	return false;
 }
 
 function respondTo (url, response, IP, content, code, MIME) {

@@ -105,7 +105,6 @@ function send404 (badURL, response, IP) {
 function send500 (url, response, IP) {
 	$nt('send500 - The url "' + url + '" was either originally in the directory', 'but not at read time, or never exited for ' + IP + '.');
 	respondTo (url, response, IP, _500Page, 500, 'text/html');
-	return false;
 }
 
 function respondTo (url, response, IP, content, code, MIME) {

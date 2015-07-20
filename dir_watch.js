@@ -6,13 +6,13 @@
  * upon detection of a file change. Note that this does not scale well with
  * many files to keep track of.
  */
-var fs = require ('fs'), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', allPaths = bfs (__dirname), SECONDS = 1, p = process;
+var fs = require ('fs'), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', allPaths = bfs (__dirname), SECONDS = 0.5, p = process;
 console.log ('\n"dir_watch.js" child process started! S: ' + S);
 
 allPaths.sort ();
 process.send (concat (allPaths));
 
-setInterval (updatePaths, SECONDS * 1000);
+updatePaths ();
 
 function updatePaths () {
 	var d = bfs (__dirname);
@@ -22,6 +22,8 @@ function updatePaths () {
 
 	function _true () {allPaths = d; p.send (concat (d));}
 	function _false () {d.sort (); for (var i = 0; i < d.length; i++) if (allPaths[i] !== d[i]) {allPaths = d; p.send (concat (d)); break;}}
+
+	setTimeout (updatePaths, SECONDS * 1000);
 }
 
 /* Called before process.send to process the list of files and directories to avoid blockage in the parent process */

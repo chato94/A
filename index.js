@@ -73,18 +73,22 @@ function rawURLDoesNotMatch (route, rs, IP) {
 	function next (mapArg, file) {var u = file? file : url; setMap (u, IP, mapArg); read (u, response, IP, false);}
 }
 
-function read (route, response, IP, merge, callback) {
+function read (route, response, IP, merge, err, callback) {
 	var url = '.' + (merge? mergeMapAndURL (route, IP) : route);
 	$nt('read - Attempting to read the file in the url "' + url + '" for ' + IP, IP + ') merge: ' + merge);
+	if (!err) errCallback = send404;
 	if (!callback) callback = respondTo;
 	fs.readFile (url, function (error, content) {
-		error? send404 (url, response, IP) : callback (url, response, IP, content, 200, MIMEType (path.basename (url)));
+		error? err (url, response, IP) : callback (url, response, IP, content, 200, MIMEType (path.basename (url)));
 	});
 }
 
 function send404 (badURL, response, IP) {
 	$nt('send404 - There was a problem reading "' + badURL + '" for ' + IP, 'Sending the 404 page for ' + IP + ' instead...');
-	read (e.filter (badURL, response, IP), response, IP, false, function () {$n('THE 500 PAGE HAS ALREADY BEEN HANDLED BY ROOTSPACE.');});
+	read (e.filter (badURL, response, IP), response, IP, false, done, done);
+
+	// Handler for error and success to avoid recursive call and thus write after end error
+	function done () {}
 }
 
 function send500 (url, response, IP) {
@@ -299,15 +303,38 @@ var _500Page = '<!DOCTYPE html>' +
 	'<html>' +
 		'<head>' +
 			'<title>500% Stamina</title>' +
+			'<meta name="viewport" content="initial-scale=1, width=device-width, user-scalable=no"/>' +
+			'<style>' +
+				'h1, h2, h3, h4, h5, h6, p, br {' +
+					'color: #FFFFCC;' +
+					'font-family: "Courier New", monospace;' +
+				'}' +
+				'body {' +
+					'background-color: #0A0000;' +
+				'}' +
+				'.fire {' +
+					'color: #AA2000;' +
+				'}' +
+			'</style>' +
 		'</head>' +
 		'<body>' +
-			'<h1 style="margin: 0; padding: 0">Error 500: Internal Server Error</h1>' +
+			'<h1 style="margin: 0; padding: 0">Error Code: 500</h1><hr>' +
 			'<p style="margin: 0; padding: 0">' +
 				'There was an internal server error. Rest assured that the monkeys are most ' +
 				'likely working on it, and then try again later. If you keep seeing this message, ' +
 				'make sure to contact your local developer and tell him that the machine blew ' +
 				'up again. He (or she) will know exactly what that means, and hopefully the page ' +
 				'that you loaded will be in tip-top shape before you know it.' +
+			'</p>' +
+			'<br>' +
+			'<h2 style="margin: 0; padding: 0"><span class="fire">&#128293;&#128293;&#128293;</span> ' +
+				'Known Error <span class="fire">&#128293;&#128293;&#128293;</span></h2><hr>' +
+			'<p style="margin: 0; padding: 0">' +
+				'Do especially let the developers know if you get this message, and then the page ' +
+				'fails to connect entirely (but your Internet is still working perfectly fine). This ' + 
+				'means that the server crashed, and unless it is manually restarted from the same ' +
+				'machine, it won\'t work anymore. Thank you for your patience, and for reading this ' +
+				'message of course :)' +
 			'</p>' +
 		'</body>' +
 	'</html>';

@@ -2,10 +2,12 @@
 This is a simple static file server powered by Node.js. It is highly, highly *not* 
 recommended to replace `express` for this, as `express` has a much wider range of
 support, and more robust functionality. This is more for personal usage on a home 
-network. Note that development of this static file server is still not yet fully
+network. ~~Note that development of this static file server is still not yet fully
 complete. There are a few functions left to write for a complete, basically functional
-server, and many more still for dynamic features and database support. All in
-due time, of course.
+server, and~~ It seems that basic functionality for static file serving is complete.
+Now would be a good time to start adding support for databases, and then dynamic web
+page construction, which means many more functions still for dynamic features. As
+always, all in due time, of course.
 
 ## Summary
 It is the refactored<sup>2</sup> version of **A Server 3.1**, which was coded using

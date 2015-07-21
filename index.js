@@ -46,6 +46,7 @@ function fHTTP (rq, rs) {
 
 /* Root function of the POST request handling function tree */
 function POSTHandler (request, response, IP) {
+	// http://stackoverflow.com/questions/4295782/how-do-you-extract-post-data-in-node-js
 	var html = '<!DOCTYPE html><html><h2>POST Request Heard!</h2><p>Stay tuned for more later.</p></html>';
 	$nt('POST Methods are coming soon. Sending an HTML response for now to ' + IP);
 	respondTo ('POST Method', response, IP, html, 200, 'text/html');

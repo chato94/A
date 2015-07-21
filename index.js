@@ -200,9 +200,7 @@ function RootSpace () {
 	}
 
 	// Used to update the internal array of all /404 directories, and to log that child process has updated root
-	this.update = function () {
-		$n('################################# UPDATED ROOT #################################\n');
-	};
+	this.update = function () {$n('################################# UPDATED ROOT #################################\n');};
 }
 
 /* console.log alias functions */

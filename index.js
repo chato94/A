@@ -2,7 +2,7 @@
  * THE FOLLOWING ARE REQUIRED Node.js LIBRARIES AND GLOBAL VARIABLES FOR STATIC FILE SERVING *
  *********************************************************************************************/
 var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process');
-var Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
+var qs = require ('querystring'), Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
 var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0';
 
 /* Fork all necessary child processes */
@@ -47,17 +47,21 @@ function fHTTP (rq, rs) {
 /* Root function of the POST request handling function tree */
 function POSTHandler (request, response, IP) {
 	// http://stackoverflow.com/questions/4295782/how-do-you-extract-post-data-in-node-js
-	var html = '<!DOCTYPE html><html><h2>POST Request Heard!</h2><p>Stay tuned for more later.</p></html>';
+	var body = '';
+	var html0 = '<!DOCTYPE html><html><h2>POST Request Heard!</h2><h4>Query String: ', html1 = '</h4><p>Stay tuned for more later.</p></html>';
 	$nt('POST Methods are coming soon. Sending an HTML response for now to ' + IP);
-	respondTo ('POST Method', response, IP, html, 200, 'text/html');
+	request.on ('data', function (data) {body += data;});
+	request.on ('end', function () {
+		respondTo (request.url, response, IP, html0 + body + html1, 200, 'text/html');
+	});
 }
 
 /* Root function of the GET request handling function tree */
 function GETHandler (request, response, IP) {
-	var url = decodeURL (request.url),
-	FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIRECTORY = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
+	var url = decodeURL (request.url), deReg = deRegEx (url),
+	FILE = new RegExp ('"' + deReg + ':FILE"'), DIRECTORY = new RegExp ('"' + deReg + ':DIRECTORY"');
 	$nt('GETHandler - Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY);
-	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP, FILE);
+	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP, FILE, deReg);
 }
 
 function urlMatchesDir (url, response, IP, FILE) {
@@ -68,21 +72,36 @@ function urlMatchesDir (url, response, IP, FILE) {
 	function next (mapArg) {setMap (url, IP, mapArg); read (url, response, IP, false);}
 }
 
-function rawURLDoesNotMatch (route, rs, IP) {
-	$nt('rawURLDoesNotMatch - The url "' + route + '" does not match a file in the current directory!', 'Attempting to merge and match for ' + IP);
-	var url = mergeMapAndURL (route, IP), q = '\\.html:FILE"', r = root,
-	FILE = new RegExp ('"' + deRegEx (url) + ':FILE"'), DIR = new RegExp ('"' + deRegEx (url) + ':DIRECTORY"');
-	r.match (FILE)? url.match (/\.html$/)? next (true) : read (url, rs, IP, false) : r.match (DIR)? _() : send404 (url, rs, IP);
+function rawURLDoesNotMatch (route, rs, IP, deReg) {
+	$nt('rawURLDoesNotMatch - The url "' + route + '" does not match a file in the current directory!', 'Attempting to correct and match for ' + IP);
+	var url = mergeMapAndURL (route, IP), q = '\\.html:FILE"', u = '"' + deReg, r = root;
 
-	// Used to handle an incoming URL that matches a directory rather than a file. Should never happen, but just in case, it's here
-	function _() {
-		$t('_(' + IP + ') was called, and it has been determined that', 'dir_watch.js would not match this case.');
-		var I = new RegExp ('"' + deRegEx (url) + '\\/index' + q), H = root.match (new RegExp ('"' + deRegEx (url) + '\\/.*' + q));
-		root.match (I)? next (false, url + '/index.html') : H? next (false, H[0].replace (/^"|:FILE"$/g, '')) : send404 (url, response, IP);
+	// Regexes to match the re-mapped route, route + index, route + html, and route is dir cases
+	var MAP = new RegExp ('"' + deRegEx (url) + ':FILE"'),
+	IDX = new RegExp (u + '\\/index' + q),
+	HTML = new RegExp (u + '.*' + q);
+
+	// The request was a dependency
+	if (r.match (MAP)) {
+		if (url.match (/\.html$/)) next (true);
+		else read (url, rs, IP, false);
 	}
 
+	// The request URL was lazily typed
+	else if (r.match (IDX))
+		next (true, route + '/index.html');
+
+	// The request URL was lazily typed, and there is no index.html file in the requested URL
+	else if (r.match (HTML) {
+		url = r.match (HTML)[0].replace (/^"|:FILE"/g, '');
+		next (true, url);
+	}
+
+	// For everything else, there's Master Card (r)
+	else send404 (url, rs, IP);
+
 	// Sets the client page map for potential dependency concatenation if .html file exists, then reads the file from storage
-	function next (mapArg, file) {var u = file? file : url; setMap (u, IP, mapArg); read (u, response, IP, false);}
+	function next (mapArg, file) {var ur = file? file : url; setMap (ur, IP, mapArg); read (ur, response, IP, false);}
 }
 
 function read (route, response, IP, merge, err, callback) {

@@ -57,8 +57,8 @@ function POSTHandler (request, response, IP) {
 function GETHandler (request, response, IP) {
 	var url = decodeURL (request.url), deReg = deRegEx (url),
 	FILE = new RegExp ('"' + deReg + ':FILE"'), DIRECTORY = new RegExp ('"' + deReg + ':DIRECTORY"');
-	$nt('GETHandler - Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY, 'deReg0: ' + deReg);
-	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP, FILE, deReg);
+	$nt('GETHandler - Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY);
+	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP, FILE);
 }
 
 function urlMatchesDir (url, response, IP, FILE) {
@@ -69,16 +69,16 @@ function urlMatchesDir (url, response, IP, FILE) {
 	function next (mapArg) {setMap (url, IP, mapArg); read (url, response, IP, false);}
 }
 
-function rawURLDoesNotMatch (route, rs, IP, deReg) {
-	$nt('rawURLDoesNotMatch - The url "' + route + '" does not match a file in the current directory!', 'Attempting to correct and match for ' + IP, 'deReg1: ' + deReg);
-	var url = mergeMapAndURL (route, IP), q = '\\.html:FILE"', u = '"' + deReg, r = root;
+function rawURLDoesNotMatch (route, rs, IP) {
+	$nt('rawURLDoesNotMatch - The url "' + route + '" does not match a file in the current directory!', 'Attempting to correct and match for ' + IP);
+	var deReg = deRegEx (route), url = mergeMapAndURL (route, IP), q = '\\.html:FILE"', u = '"' + deReg, r = root;
 
 	// Regexes to match the re-mapped route, route + index, route + html, and route is dir cases
 	var MAP = new RegExp ('"' + deRegEx (url) + ':FILE"'),
 	IDX = new RegExp (u + '\\/index' + q),
-	HTML = new RegExp (u + '.*' + q);
+	HTML = new RegExp (u + '\\/[^/]*' + q);
 
-	$t('MAP rgx: ' + MAP, 'IDX rgx: ' + IDX, 'HTML rgx: ' + HTML, 'u: ' + u);
+	$t('MAP rgx: ' + MAP, 'IDX rgx: ' + IDX, 'HTML rgx: ' + HTML, 'u: ' + u + '"');
 
 	// The request was a dependency
 	if (r.match (MAP)) {
@@ -100,7 +100,7 @@ function rawURLDoesNotMatch (route, rs, IP, deReg) {
 	else send404 (url, rs, IP);
 
 	// Sets the client page map for potential dependency concatenation if .html file exists, then reads the file from storage
-	function next (mapArg, file) {var ur = file? file : url; setMap (ur, IP, mapArg); read (ur, response, IP, false);}
+	function next (mapArg, file) {var ur = file? file : url; setMap (ur, IP, mapArg); read (ur, rs, IP, false);}
 }
 
 function read (route, response, IP, merge, err, callback) {

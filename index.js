@@ -2,7 +2,7 @@
  * THE FOLLOWING ARE REQUIRED Node.js LIBRARIES AND GLOBAL VARIABLES FOR STATIC FILE SERVING *
  *********************************************************************************************/
 var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process');
-var qs = require ('querystring'), Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
+var qs = require ('querystring'), O = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
 var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0';
 
 /* Fork all necessary child processes */
@@ -25,12 +25,9 @@ function iS () {
 
 /* Gets the IPv4 address of the machine running the server */
 function localIPAddress () {
-	var a, i, p, j;
-	for (p in Int) {
-		i = Int[p];
-		for (j = 0; j < i.length; j++) if (a = i[j], a.family === 'IPv4' && a.address !== L && !a.internal) {
-			return a.address;
-		}
+	var a, p, j;
+	for (p in O) {
+		for (j = 0; j < O[p].length; j++) if (a = O[p][j], a.family === 'IPv4' && a.address !== L && !a.internal) return a.address;
 	} return Z;
 }
 
@@ -60,7 +57,7 @@ function POSTHandler (request, response, IP) {
 function GETHandler (request, response, IP) {
 	var url = decodeURL (request.url), deReg = deRegEx (url),
 	FILE = new RegExp ('"' + deReg + ':FILE"'), DIRECTORY = new RegExp ('"' + deReg + ':DIRECTORY"');
-	$nt('GETHandler - Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY);
+	$nt('GETHandler - Detected a GET request! for ' + IP, IP + ') Filtered URL: ' + url, 'FILE regex: ' + FILE, 'DIRECTORY regex: ' + DIRECTORY, 'deReg0: ' + deReg);
 	root.match (FILE) || root.match (DIRECTORY)? urlMatchesDir (url, response, IP, FILE) : rawURLDoesNotMatch (url, response, IP, FILE, deReg);
 }
 
@@ -73,13 +70,15 @@ function urlMatchesDir (url, response, IP, FILE) {
 }
 
 function rawURLDoesNotMatch (route, rs, IP, deReg) {
-	$nt('rawURLDoesNotMatch - The url "' + route + '" does not match a file in the current directory!', 'Attempting to correct and match for ' + IP);
+	$nt('rawURLDoesNotMatch - The url "' + route + '" does not match a file in the current directory!', 'Attempting to correct and match for ' + IP, 'deReg1: ' + deReg);
 	var url = mergeMapAndURL (route, IP), q = '\\.html:FILE"', u = '"' + deReg, r = root;
 
 	// Regexes to match the re-mapped route, route + index, route + html, and route is dir cases
 	var MAP = new RegExp ('"' + deRegEx (url) + ':FILE"'),
 	IDX = new RegExp (u + '\\/index' + q),
 	HTML = new RegExp (u + '.*' + q);
+
+	$t('MAP rgx: ' + MAP, 'IDX rgx: ' + IDX, 'HTML rgx: ' + HTML, 'u: ' + u);
 
 	// The request was a dependency
 	if (r.match (MAP)) {
@@ -92,7 +91,7 @@ function rawURLDoesNotMatch (route, rs, IP, deReg) {
 		next (true, route + '/index.html');
 
 	// The request URL was lazily typed, and there is no index.html file in the requested URL
-	else if (r.match (HTML) {
+	else if (r.match (HTML)) {
 		url = r.match (HTML)[0].replace (/^"|:FILE"/g, '');
 		next (true, url);
 	}

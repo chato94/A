@@ -9,6 +9,11 @@ Now would be a good time to start adding support for databases, and then dynamic
 page construction, which means many more functions still for dynamic features. As
 always, all in due time, of course.
 
+## Temporary Update
+I have decided to re-factor the directory watcher, and thus will need much updating
+for the `index.js` file. In the mean time, use an old, functioning version of the
+server.
+
 ## Summary
 It is the refactored<sup>2</sup> version of **A Server 3.1**, which was coded using
 Dropbox and a lot of patience. Hopefully, this server will simply be a plug and play

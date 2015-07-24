@@ -33,7 +33,24 @@ function concat (array) {
 
 	// Remove the path leading to index.js for easier reading in the parent function
 	for (var i = 0; i < array.length; i++) newArray.push (array[i].replace (new RegExp ('^' + deRegEx (__dirname)), '').replace (/\\/g, '/'));
-	return ['Update Directory', '"' + newArray.join ('" "') + '"'];
+
+	// Construct mapping of top 
+	var t = {}, matches, top;
+	for (var i = 0; i < newArray.length; i++) {
+		matches = newArray[i].match (/\/[^/]+/g), top = (matches || [false])[0];
+		
+		// Add the mapping if the mapping does not exist
+		if (!t[top] && top) t[top] = [];
+
+		// Push the dependency to the top directory if the top directory exists
+		if (t[top]) {
+			matches.splice (0, 1);
+			t[top].push (matches.join (''));
+		}
+	}
+
+	//return ['Update Directory', '"' + newArray.join ('" "') + '"'];0
+	return ['Update Mapping', t];
 }
 
 /* Recursive breadth-first search that constructs a list of all files relative to __dirname */

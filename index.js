@@ -3,7 +3,7 @@
  *********************************************************************************************/
 var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process');
 var Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', server;
-var SERVER_IP = localIPAddress (), PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0';
+var S_IP = localIPAddress (), PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0';
 
 /* Fork all necessary child processes */
 var dirWatcher = cp.fork (__dirname + '/dirwatch.js');
@@ -15,11 +15,11 @@ var root = {}, e = new DirSpace (), receivedInit = false;
 var cPM = {};
 
 /* Wait until first update of directories to start serving files */
-var int = setInterval (function () {if (receivedInit) server = http.createServer (fHTTP).listen (PORT, SERVER_IP, BACKLOG, iS);}, 250);
+var int = setInterval (function () {if (receivedInit) server = http.createServer (fHTTP).listen (PORT, S_IP, BACKLOG, iS);}, 250);
 
 /* Server initialization function */
 function iS () {
-    $('** The server is up and running! Listening to requests at ' + SERVER_IP + ' on port ' + PORT + ' **\n');
+    $('** The server is up and running! Listening to requests at ' + S_IP + ' on port ' + PORT + ' **\n');
     clearInterval (int);
 }
 
@@ -115,34 +115,32 @@ function MIMEType (file) {
 /* Converts the URL encoding to the literal string representation */
 function decodeURL (url) {
     // Convert the initial request into a directory that actually exists
-    var temp = url === '/' || url === '/index.html'? '/init/index.html' : url;
+    var temp = url === '/' || url === '/index.html'? '/init/index.html' : url, u = temp.replace (SPACE, ' ');
     
     // Convert URL encodings to their literal string representations and return the value
-    return temp.replace (SPACE, ' ')      .replace (NEWLINE, '\n')    .replace (AT, '@')          .replace (HASHTAG, '#')
-               .replace (PERCENT, '%')    .replace (CARROT, '^')      .replace (AMPERSAND, '&')   .replace (PLUS, '+')
-               .replace (OPENBRACE, '{')  .replace (CLOSEBRACE, '}')  .replace (OPENBRACKET, '[') .replace (CLOSEBRACKET, ']')
-               .replace (PIPE, '|')       .replace (BACKSLASH, '\\')  .replace (FORWARDSLASH, '/').replace (COLON, ':')
-               .replace (DOUBLEQUOTE, '"').replace (SINGLEQUOTE, "'") .replace (LESSTHAN, '<')    .replace (GREATERTHAN, '>')
-               .replace (COMMA, ',')      .replace (QUESTIONMARK, '?').replace (BACKTICK, '`')    .replace (DOLLAR, '$')
-               .replace (EQUALS, '=')     .replace (SEMICOLON, ';');
+    return u.replace (SCLN, ';')  .replace (NLN, '\n') .replace (AT, '@')   .replace (HTAG, '#')  .replace (PSNT, '%')
+            .replace (CARROT, '^').replace (AND, '&')  .replace (PLUS, '+') .replace (OBRCE, '{') .replace (CBRCE, '}')
+            .replace (OBRKT, '[') .replace (CBRKT, ']').replace (PIPE, '|') .replace (BSLSH, '\\').replace (FSLSH, '/')
+            .replace (CLN, ':')   .replace (DQTE, '"') .replace (SQTE, "'") .replace (LT, '<')    .replace (GT, '>')
+            .replace (COMMA, ',') .replace (QM, '?')   .replace (BTICK, '`').replace (MNY, '$')   .replace (EQL, '=');
 }
 
 /* Lets new RegExp match for the complete literal of the input string */
 function deRegEx (str) {
-    return str.replace (/\\/g, '\\\\').replace (/\//g, '\\/').replace (/\?/g, '\\?').replace (/\+/g, '\\+').replace (/\[/g, '\\[')
-              .replace (/\]/g, '\\]') .replace (/\{/g, '\\{').replace (/\}/g, '\\}').replace (/\./g, '\\.').replace (/\*/g, '\\*')
-              .replace (/\^/g, '\\^') .replace (/\$/, '\\$') .replace (/\(/g, '\\(').replace (/\)/g, '\\)').replace (/\|/g, '\\|');
+    var s = '\\';
+    return str.replace (/\\/g, s+s)  .replace (/\//g, '\\/').replace (/\?/g, '\\?').replace (/\+/g, '\\+').replace (/\[/g, '\\[')
+              .replace (/\]/g, '\\]').replace (/\{/g, '\\{').replace (/\}/g, '\\}').replace (/\./g, '\\.').replace (/\*/g, '\\*')
+              .replace (/\^/g, '\\^').replace (/\$/, '\\$') .replace (/\(/g, '\\(').replace (/\)/g, '\\)').replace (/\|/g, '\\|');
 }
 
-/*********************************************************************************************************************************
- * THE FOLLOWING ARE GLOBAL VARIABLES THAT WOULD BE TOO LARGE TO FIT ON A SINGLE LINE AND COULD POTENTIALLY BE ON THEIR OWN FILE *
- *********************************************************************************************************************************/
+/*****************************************************************************************************
+ * THE FOLLOWING ARE GLOBAL VARIABLES SPAN MULTIPLE LINES OR THEIR OWN FILES TO CONSERVE READABILITY *
+ *****************************************************************************************************/
 /* URL decoding regexes */
-var SPACE = /%20/g,        NEWLINE = /%0A/g,     AT = /%40/g,        HASHTAG = /%23/g,      DOLLAR = /%24/g,     PERCENT = /%25/g, 
-    AMPERSAND = /%26/g,    PLUS = /%2B/g,        EQUALS = /%3D/g,    OPENBRACE = /%7B/g,    CLOSEBRACE = /%7D/g, OPENBRACKET = /%5B/g, 
-    CLOSEBRACKET = /%5D/g, PIPE = /%7C/g,        BACKSLASH = /%5C/g, FORWARDSLASH = /%2F/g, COLON = /%3A/g,      SEMICOLON = /%3B/g, 
-    DOUBLEQUOTE = /%22/g,  SINGLEQUOTE = /%27/g, LESSTHAN = /%3C/g,  GREATERTHAN = /%3E/g,  COMMA = /%2C/g,      QUESTIONMARK = /%3F/g, 
-    BACKTICK = /%60/g,     CARROT = /%5E/g;
+var SPACE = /%20/g, NLN = /%0A/g,   AT = /%40/g,    HTAG = /%23/g,  MNY = /%24/g,   PSNT = /%25/g, AND = /%26/g,   PLUS = /%2B/g,
+    EQL = /%3D/g,   OBRCE = /%7B/g, CBRCE = /%7D/g, OBRKT = /%5B/g, CBRKT = /%5D/g, PIPE = /%7C/g, BSLSH = /%5C/g, FSLSH = /%2F/g,
+    CLN = /%3A/g,   SCLN = /%3B/g,  DQTE = /%22/g,  SQTE = /%27/g,  LT = /%3C/g,    GT = /%3E/g,   COMMA = /%2C/g, QM = /%3F/g, 
+    BTICK = /%60/g, CARROT = /%5E/g;
 
 /* Internal server error page */
 var _500Page = ('' + fs.readdirSync (__dirname + '/500.html'));

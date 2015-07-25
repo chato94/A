@@ -34,18 +34,18 @@ function concat (array) {
 	// Remove the path leading to index.js for easier reading in the parent function
 	for (var i = 0; i < array.length; i++) newArray.push (array[i].replace (new RegExp ('^' + deRegEx (__dirname)), '').replace (/\\/g, '/'));
 
-	// Construct mapping of top 
-	var t = {}, matches, top;
+	// Construct mapping of top folders to all valid files under that top folder (sorted)
+	var t = {};
 	for (var i = 0; i < newArray.length; i++) {
-		matches = newArray[i].match (/\/[^/]+/g), top = (matches || [false])[0];
+		var match = newArray[i].match (/\/[^/]+/), top = (match || [false])[0];
 		
 		// Add the mapping if the mapping does not exist
-		if (!t[top] && top) t[top] = [];
+		if ( top && !t[top]) t[top] = [];
 
 		// Push the dependency to the top directory if the top directory exists
-		if (t[top]) {
-			matches.splice (0, 1);
-			t[top].push (matches.join (''));
+		if (top && t[top]) {
+			t[top].push (newArray[i]);
+			t[top].sort ();
 		}
 	}
 
@@ -60,9 +60,9 @@ function bfs (dirStr) {
 	function bfsWorker (path) {
 		try {
 			dir = fs.readdirSync (path);
-			dir.length? (function () {for (var i = 0; i < dir.length; i++) dirs.push (path + S + dir[i]);})() : all.push (path + ':DIRECTORY');
+			dir.length? (function () {for (var i = 0; i < dir.length; i++) dirs.push (path + S + dir[i]);})() : null;
 		} catch (error) {
-			error.code === 'ENOTDIR'? all.push (path + ':FILE') : console.log ('UNKNOWN ERROR OCCURRED:\n' + error + '\n');
+			error.code === 'ENOTDIR'? all.push (path/* + ':FILE'*/) : console.log ('UNKNOWN ERROR OCCURRED:\n' + error + '\n');
 		} 
 
 		if (dirs.length) bfsWorker (dirs.splice (0, 1)[0]);

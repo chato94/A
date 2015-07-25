@@ -39,7 +39,7 @@ function localIPAddress () {
  ********************************************************************************************************/
 /* Handle incoming messages from child processes */
 dirWatcher.on ('message', function (m) {
-    if (m[0] === 'Update Directory') {
+    if (m[0] === 'Update Mapping') {
         if (!receivedInit) receivedInit = true;
         root = m[1];
         e.update ();

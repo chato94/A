@@ -80,5 +80,5 @@ function deRegEx (str) {
     var s = '\\';
     return str.replace (/\\/g, s+s)  .replace (/\//g, '\\/').replace (/\?/g, '\\?').replace (/\+/g, '\\+').replace (/\[/g, '\\[')
               .replace (/\]/g, '\\]').replace (/\{/g, '\\{').replace (/\}/g, '\\}').replace (/\./g, '\\.').replace (/\*/g, '\\*')
-              .replace (/\^/g, '\\^').replace (/\$/, '\\$') .replace (/\(/g, '\\(').replace (/\)/g, '\\)').replace (/\|/g, '\\|');
+              .replace (/\^/g, '\\^').replace (/\$/g, '\\$').replace (/\(/g, '\\(').replace (/\)/g, '\\)').replace (/\|/g, '\\|');
 }

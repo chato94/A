@@ -59,16 +59,6 @@ function killChildrenAndExit () {
 /************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE HELPER FUNCTIONS AND ALIASES FOR REPEATED FUNCTIONS LIKE LOGGING *
  ************************************************************************************************/
-/* Sets the global map for the client */
-function setMap (url, IP, useDirname) {
-    var newMap = useDirname? path.dirname (url) : url;
-    $nt('Re-mapping ' + IP + ' from "' + cPM[IP] + '" to "' + newMap + '"');
-    cPM[IP] = newMap;
-}
-
-/* Concatenates the client page map for IP with the requested url */
-function mergeMapAndURL (url, IP) {return cPM[IP]? cPM[IP] + url : url;}
-
 /* Handles bad URL error filtering for the 404 page by keeping track of the valid directories */
 function DirSpace () {
 
@@ -77,20 +67,45 @@ function DirSpace () {
 
         // Binary search worker function
         function b$ (a, me, i, j) {
-            var m = Math.floor ((i + j) / 2);
-            return i === j? a[i] === me? true : false : a[m] === me? true : a[m] > me? b$(a, me, i, m - 1) : b$(a, me, m + 1, j);
+            var m = Math.floor ((i + j) / 2), t = true, f = false, l = a.length;
+            return l? f : i === j? a[i] === me? t : f : a[m] === me? t : a[m] > me? b$(a, me, i, m - 1) : b$(a, me, m + 1, j);
         }
 
         return b$ (a, me, 0, a.length - 1);
     }
 
-    this.match = function (rawURL) {
-        var url = decodeURL (rawURL), segs = url.match (/\/[^/]+/g) || ['/init', '/index.html'], deps = root[segs[0]];
-        return deps && bS (deps, url);
+    // Merges the input URL with the master map if it exists; returns the input URL as-is otherwise
+    function mrg (url, IP) {return cPM[IP]? cPM[IP] + url : url;}
+
+    this.match = function (rawURL, IP) {
+        var url = decodeURL (rawURL), sgs = url.match(/\/[^/]+/g) || ['/init', '/index.html'], top = sgs[0], 
+        	appendStr = mrg (url, IP), idxStr = url + '/index.html', deps = root[top] || [], i;
+
+        // The user agent requested a perfect path to the file
+        if ((i = bS (deps, url)) !== false) return deps[i];
+
+        // The user agent's page requested a dependency
+        else if ((i = bS (deps, appendStr)) !== false) return deps[i];
+
+        // The user agent lazily typed the request, and it matches a valid path to an index.html file
+        else if ((i = bS (deps, idxStr)) !== false) return deps[i];
+
+        // The user agent lazily typed the request, and it might match a valid path to an html file
+        else for (i = 0; i < deps.length; i++) if (deps[i].match (/\\.html$/)) return deps[i];
+
+        // The user agent requested a path that does not exist in the current state of the directory
+        return '/404/index.html';
     };
 
     // Used to update the internal array of all /404 directories, and to log that child process has updated root
     this.update = function () {$n('##################################### UPDATED ROOT #####################################\n');};
+}
+
+/* Sets the global map for the client */
+function setMap (url, IP, useDirname) {
+    var newMap = useDirname? path.dirname (url) : url;
+    $nt('Re-mapping ' + IP + ' from "' + cPM[IP] + '" to "' + newMap + '"');
+    cPM[IP] = newMap;
 }
 
 /* console.log alias functions */
@@ -127,9 +142,9 @@ function deRegEx (str) {
               .replace (/\^/g, '\\^').replace (/\$/g, '\\$').replace (/\(/g, '\\(').replace (/\)/g, '\\)').replace (/\|/g, '\\|');
 }
 
-/*****************************************************************************************************
- * THE FOLLOWING ARE GLOBAL VARIABLES SPAN MULTIPLE LINES OR THEIR OWN FILES TO CONSERVE READABILITY *
- *****************************************************************************************************/
+/*************************************************************************************************************************
+ * THE FOLLOWING ARE GLOBAL VARIABLES SPAN MULTIPLE LINES, OR THEY ARE STORED IN THEIR OWN FILES TO CONSERVE READABILITY *
+ *************************************************************************************************************************/
 /* URL decoding regexes */
 var SPACE = /%20/g, NLN = /%0A/g,   AT = /%40/g,    HTAG = /%23/g,  MNY = /%24/g,   PSNT = /%25/g, AND = /%26/g,   PLUS = /%2B/g,
     EQL = /%3D/g,   OBRCE = /%7B/g, CBRCE = /%7D/g, OBRKT = /%5B/g, CBRKT = /%5D/g, PIPE = /%7C/g, BSLSH = /%5C/g, FSLSH = /%2F/g,

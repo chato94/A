@@ -44,7 +44,7 @@ function concat (array) {
         var match = newArray[i].match (/\/[^/]+/), top = (match || [false])[0];
         
         // Add the mapping if the mapping does not exist
-        if ( top && !t[top]) t[top] = [];
+        if (top && !t[top]) t[top] = [];
 
         // Push the dependency to the top directory if the top directory exists
         if (top && t[top]) {

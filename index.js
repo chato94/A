@@ -2,8 +2,8 @@
  * THE FOLLOWING ARE REQUIRED Node.js LIBRARIES AND GLOBAL VARIABLES FOR STATIC FILE SERVING *
  *********************************************************************************************/
 var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process'),
-	Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', S_IP = localIPAddress (),
-	PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0', server;
+    Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', S_IP = localIPAddress (),
+    PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0', server;
 
 /* Fork all necessary child processes */
 var dirWatcher = cp.fork (__dirname + '/dirwatch.js');
@@ -40,33 +40,37 @@ function localIPAddress () {
 /* Function from which all other callbacks execute */
 function fHTTP (rq, rs) {
     var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress;
-    $n('*** fHTTP - Incoming request heard! Initializing response for ' + IP + ' ***');
+    $n('\n*** fHTTP - Incoming request heard! Initializing response for ' + IP + ' ***');
     rq.method === 'GET'? GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
 }
 
-function POSTHandler (request, reponse, IP) {
+function POSTHandler (request, response, IP) {
 
 }
 
-function GETHandler (request, reponse, IP) {
-	var ip = IP + ') ', wrap = d.match (request.url, IP), url = '.' + wrap[0], code = wrap[1];
-	$nt(ip+'Detected a GET request!', ip+'Raw URL: ' + request.url, ip+'Filtered URL: ' + url);
-	read (url, response, IP, code);
+function GETHandler (request, response, IP) {
+    var ip = IP + ') ', wrap = d.match (request.url, IP), url = '.' + wrap[0], code = wrap[1];
+    $nt(ip+'GETHandler - Detected a GET request!', ip+'Raw URL: ' + request.url, ip+'Filtered URL: ' + url);
+    read (url, response, IP, code);
 }
 
 function send500 (url, response, IP, error) {
-	$nt(IP + ') An error occurred while serving: ' + url);
+    $nt(IP + ') send500 - An error occurred while serving: ' + url);
+    respondTo (url, response, IP, _500Page, 500, 'text/html');
 }
 
-function read (url, reponse, IP, code) {
-	$nt(IP + ') Attempting to read the file in: ' + url);
-	fs.readFile (url, function (error, content) {
-		
-	});
+function read (url, response, IP, code) {
+    $nt(IP + ') read - Attempting to read the file in: ' + url);
+    fs.readFile (url, function (error, content) {
+        error? send500 (url, response, IP, error) : respondTo (url, response, IP, content, code, MIMEType (path.basename (url)));
+    });
 }
 
 function respondTo (url, response, IP, content, code, mime) {
-
+    var ip = IP + ') ';
+    $nt(ip+'respondTo - Finalizing the response for: ' + url, ip+'Status Code: ' + code);
+    response.writeHead (code, {'Content-Type': mime});
+    response.write (content, function () {$n('*** Finished the response for ' + IP + ' ***')});
 }
 
 /***************************************************************************************************
@@ -77,6 +81,7 @@ dirWatcher.on ('message', function (m) {
     if (m[0] === 'Update Mapping') {
         if (!receivedInit) receivedInit = true;
         root = m[1];
+        $(root);
         d.update ();
     }
 });
@@ -98,15 +103,15 @@ function killChildrenAndExit () {
 function DirSpace () {
 
     // Simple binary search over an array to find the index of its location, or false if it's not in the array
-    function bS (a, me) {
+    function bS (a, o) {
 
         // Binary search worker function
-        function b$ (a, me, i, j) {
+        function s (a, me, i, j) {
             var m = Math.floor ((i + j) / 2), t = true, f = false, l = a.length;
-            return l? f : i === j? a[i] === me? t : f : a[m] === me? t : a[m] > me? b$(a, me, i, m - 1) : b$(a, me, m + 1, j);
+            return !l || i > j? f : i === j? a[i] === o? i : f : a[m] === o? m : a[m] > o? s(a, o, i, m - 1) : s(a, o, m + 1, j);
         }
 
-        return b$ (a, me, 0, a.length - 1);
+        return s (a, o, 0, a.length - 1);
     }
 
     // Maps the master page of the incoming IP address if the URL is an HTML file
@@ -118,22 +123,38 @@ function DirSpace () {
     // Attempts to match the raw URL directly from the request with a directory found in 
     this.match = function (rawURL, IP) {
         var url = decodeURL (rawURL), sgs = url.match (/\/[^/]+/g) || ['/404', '/index.html'], top = sgs[0], 
-        	appendStr = mrg (url, IP), idxStr = url + '/index.html', deps = root[top] || [], i;
+            appendStr = mrg (url, IP), idxStr = url + '/index.html', deps = root[top] || [], i;
+
+        $nt('url: ' + url, 'appendStr: ' + appendStr, 'idxStr: ' + idxStr, 'deps: [' + deps + ']');
+        $t('0: ' + bS (deps, url), '1: ' + bS (deps, appendStr), '2: ' + bS (deps, idxStr), '3: ' + deps.length);
 
         // The user agent requested a perfect path to the file
-        if ((i = bS (deps, url)) !== false) return map (deps[i], IP, 200);
+        if ((i = bS (deps, url)) !== false) {
+            $t('Perf');
+            return map (deps[i], IP, 200);
+        }
 
         // The user agent's page requested a dependency
-        else if ((i = bS (deps, appendStr)) !== false) return [deps[i], 200];
+        else if ((i = bS (deps, appendStr)) !== false) {
+            $t('Dep');
+            return [deps[i], 200];
+        }
 
         // The user agent lazily typed the request, and it matches a valid path to an index.html file
-        else if ((i = bS (deps, idxStr)) !== false) return map (deps[i], IP, 200);
+        else if ((i = bS (deps, idxStr)) !== false) {
+            $t('Idx');
+            return map (deps[i], IP, 200);
+        }
 
         // The user agent lazily typed the request, and it might match a valid path to an html file
-        else if (deps.length) for (i = 0; i < deps.length; i++) if (deps[i].match (/\\.html$/)) return map (deps[i], IP, 200);
+        else if (deps.length) {
+            $t('Test Idx');
+            for (i = 0; i < deps.length; i++) if (deps[i].match (/\\.html$/)) return map (deps[i], IP, 200);
+        }
 
         // The user agent requested a path that does not exist in the current state of the directory
-        else return map ('/404/index.html', IP, 404);
+        $t('404');
+        return map ('/404/index.html', IP, 404);
     };
 
     // Used to update the internal array of all /404 directories, and to log that child process has updated root
@@ -184,7 +205,7 @@ var NL = /%0A/g,  SPACE = /%20/g, BTICK = /%60/g, HTAG = /%23/g,  MNY = /%24/g, 
     AT = /%40/g,  CRRT = /%5E/g;
 
 /* Internal server error page */
-var _500Page = '' + fs.readdirSync ('./500.html');
+var _500Page = '' + fs.readFileSync ('./500.html');
 
 /* Mapping of file extensions to their corresponding MIME type */
-var extensionMap = JSON.parse ('' + fs.readdirSync ('./mimeobj.json'));
+var extensionMap = JSON.parse ('' + fs.readFileSync ('./mimeobj.json'));

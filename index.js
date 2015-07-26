@@ -78,25 +78,19 @@ function DirSpace () {
         // Binary search worker function
         function b$ (a, me, i, j) {
             var m = Math.floor ((i + j) / 2);
-            return i === j? a[i] === me? i : false : a[m] === me? m : a[m] > me? b$ (a, me, i, m - 1) : b$ (a, me, m + 1, j);
+            return i === j? a[i] === me? true : false : a[m] === me? true : a[m] > me? b$(a, me, i, m - 1) : b$(a, me, m + 1, j);
         }
 
         return b$ (a, me, 0, a.length - 1);
     }
 
-    this.match = function (url) {
-        var segs = url.match (/\/[^/]+/g) || ['/init', '/index.html'], deps = root[segs[0]], i;
-        if (deps) {
-            i = bS (deps, url);
-        }
-    };
-
-    this.errorMatch = function (url) {
-        var dependencies
+    this.match = function (rawURL) {
+        var url = decodeURL (rawURL), segs = url.match (/\/[^/]+/g) || ['/init', '/index.html'], deps = root[segs[0]];
+        return deps && bS (deps, url);
     };
 
     // Used to update the internal array of all /404 directories, and to log that child process has updated root
-    this.update = function () {$n('################################# UPDATED ROOT #################################\n');};
+    this.update = function () {$n('##################################### UPDATED ROOT #####################################\n');};
 }
 
 /* console.log alias functions */

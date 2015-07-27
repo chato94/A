@@ -44,21 +44,25 @@ function fHTTP (rq, rs) {
     rq.method === 'GET'? GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
 }
 
+/* Root function of the POST request handling function tree */
 function POSTHandler (request, response, IP) {
 
 }
 
+/* Root function of the GET request handling function tree */
 function GETHandler (request, response, IP) {
     var ip = IP + ') ', wrap = d.match (request.url, IP), url = '.' + wrap[0], code = wrap[1];
     $nt(ip+'GETHandler - Detected a GET request!', ip+'Raw URL: ' + request.url, ip+'Filtered URL: ' + url);
     read (url, response, IP, code);
 }
 
+/* Handles any calls that were guaranteed to work in theory, but did not */
 function send500 (url, response, IP, error) {
     $nt(IP + ') send500 - An error occurred while serving: ' + url);
     respondTo (url, response, IP, _500Page, 500, 'text/html');
 }
 
+/* Handles any calls to the fs module to read a file in the specified path */
 function read (url, response, IP, code) {
     $nt(IP + ') read - Attempting to read the file in: ' + url);
     fs.readFile (url, function (error, content) {
@@ -66,6 +70,7 @@ function read (url, response, IP, code) {
     });
 }
 
+/* Handles responding to a request with the input arguments */
 function respondTo (url, response, IP, content, code, mime) {
     var ip = IP + ') ';
     $nt(ip+'respondTo - Finalizing the response for: ' + url, ip+'Status Code: ' + code);
@@ -81,7 +86,6 @@ dirWatcher.on ('message', function (m) {
     if (m[0] === 'Update Mapping') {
         if (!receivedInit) receivedInit = true;
         root = m[1];
-        //$(root);
         d.update ();
     }
 });
@@ -99,8 +103,6 @@ function killChildrenAndExit () {
 /************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE HELPER FUNCTIONS AND ALIASES FOR REPEATED FUNCTIONS LIKE LOGGING *
  ************************************************************************************************/
-Array.prototype.toString = function () {var s = ''; for (var i = 0; i < this.length; i++) s += i > 0? ', ' + this[i] : this[i]; return '[' + s + ']'};
-
 /* Handles bad URL error filtering for the 404 page by keeping track of the valid directories */
 function DirSpace () {
 
@@ -123,13 +125,14 @@ function DirSpace () {
     // Merges the input URL with the master map if it exists; returns the input URL as-is otherwise
     function mrg (url, IP) {return cPM[IP]? cPM[IP] + url : url;}
 
+    // Filters the input URL such that only the dependency remains
     function errorMatch (rURL, IP) {
         var deps = root['/404'] || [], segs = rURL.match (/\/[^/]+/g);
-        //$t('errorMatch - deps: ' + deps, 'errorMatch - segs: ' + segs);
+
         while (segs.length > 1) {
             segs.splice (0, 1);
             var url = '/404' + segs.join (''), i;
-            //$t('errorMatch - url: ' + url, 'errorMatch - segs [w]: ' + segs);
+
             if ((i = bS (deps, url)) !== false) return map (deps[i], IP, 200);
         }
         return false;
@@ -143,45 +146,27 @@ function DirSpace () {
             sgs0 = url.match (rx) || def, sgs1 = aURL.match (rx),
             top0 = sgs0[0], top1 = sgs1[0], deps0 = root[top0] || [], deps1 = root[top1] || [], idxStr = url + def[1], i;
 
-        /** Debugging logs
-        $nt('url: ' + url, 'aURL: ' + aURL, 'idxStr: ' + idxStr, 'top0: ' + top0, 'top1: ' + top1, 'deps0: [' + deps0 + ']', 'deps1: [' + deps1 + ']');
-        $nt('0: ' + bS (deps0, url), '1: ' + bS (deps1, aURL), '2: ' + bS (deps0, idxStr), '3: ' + deps0.length);**/
-
         // The user agent requested a perfect path to the file
-        if ((i = bS (deps0, url)) !== false) {
-            //$t('Perf');
-            return map (deps0[i], IP, 200);
-        }
+        if ((i = bS (deps0, url)) !== false) return map (deps0[i], IP, 200);
 
         // The user agent's page requested a dependency
-        else if ((i = bS (deps1, aURL)) !== false) {
-            //$t('Dep');
-            return [deps1[i], 200];
-        }
+        else if ((i = bS (deps1, aURL)) !== false) return [deps1[i], 200];
 
         // The user agent lazily typed the request, and it matches a valid path to an index.html file
-        else if ((i = bS (deps0, idxStr)) !== false) {
-            //$t('Idx');
-            return map (deps0[i], IP, 200);
-        }
+        else if ((i = bS (deps0, idxStr)) !== false) return map (deps0[i], IP, 200);
 
         // The user agent lazily typed the request, and it might match a valid path to an html file
-        else if (deps0.length) {
-            //$t('Test Idx');
-            for (i = 0; i < deps0.length; i++) if (deps0[i].match (/\\.html$/)) return map (deps0[i], IP, 200);
-        }
+        else if (deps0.length) for (i = 0; i < deps0.length; i++) if (deps0[i].match (/\\.html$/)) return map (deps0[i], IP, 200);
 
         // The user agent might have requested a completely non-existent URL, but the error page is requesting dependencies
         else errdep = errorMatch (url, IP);
 
         // The user agent requested a path that does not exist in the current state of the directory
-        //$t('404');
-        //$t('errdep: ' + errdep);
         return errdep || map ('/404/index.html', IP, 404);
     };
 
     // Used to update the internal array of all /404 directories, and to log that child process has updated root
-    this.update = function () {$n('##################################### UPDATED ROOT #####################################\n');};
+    this.update = function () {$n(' #################################### UPDATED ROOT ####################################\n');};
 }
 
 /* console.log alias functions */

@@ -44,6 +44,7 @@ function fHTTP (rq, rs) {
     rq.method === 'GET'? GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
 }
 
+/* Root function of the POST request handling function tree */
 function POSTHandler (request, response, IP) {
     // http://stackoverflow.com/questions/4295782/how-do-you-extract-post-data-in-node-js
     var body = '';
@@ -58,17 +59,20 @@ function POSTHandler (request, response, IP) {
     });
 }
 
+/* Root function of the GET request handling function tree */
 function GETHandler (request, response, IP) {
     var ip = IP + ') ', wrap = d.match (request.url, IP), url = '.' + wrap[0], code = wrap[1];
     $nt(ip+'GETHandler - Detected a GET request!', ip+'Raw URL: ' + request.url, ip+'Filtered URL: ' + url);
     read (url, response, IP, code);
 }
 
+/* Handles any calls that were guaranteed to work in theory, but somehow failed */
 function send500 (url, response, IP, error) {
     $nt(IP + ') send500 - An error occurred while serving: ' + url);
     respondTo (url, response, IP, _500Page, 500, 'text/html');
 }
 
+/* Handles any calls to the fs library to read a file in the specified path */
 function read (url, response, IP, code) {
     $nt(IP + ') read - Attempting to read the file in: ' + url);
     fs.readFile (url, function (error, content) {
@@ -76,6 +80,7 @@ function read (url, response, IP, code) {
     });
 }
 
+/* Handles responding to a request with the input arguments */
 function respondTo (url, response, IP, content, code, mime) {
     var ip = IP + ') ';
     $nt(ip+'respondTo - Finalizing the response for: ' + url, ip+'Status Code: ' + code);
@@ -130,6 +135,7 @@ function DirSpace () {
     // Merges the input URL with the master map if it exists; returns the input URL as-is otherwise
     function mrg (url, IP) {return cPM[IP]? cPM[IP] + url : url;}
 
+    // Filters the input URL such that only the dependency remains if possible, false otherwise
     function errorMatch (rURL, IP) {
         var deps = root['/404'] || [], segs = rURL.match (/\/[^/]+/g);
         while (segs.length > 1) {
@@ -146,19 +152,19 @@ function DirSpace () {
 
         var url = decodeURL (rURL), aURL = mrg (url, IP), 
             sgs0 = url.match (rx) || def, sgs1 = aURL.match (rx),
-            top0 = sgs0[0], top1 = sgs1[0], deps0 = root[top0] || [], deps1 = root[top1] || [], idxStr = url + def[1], i;
+            top0 = sgs0[0], top1 = sgs1[0], dps0 = root[top0] || [], dps1 = root[top1] || [], idxStr = url + def[1], i;
 
         // The user agent requested a perfect path to the file
-        if ((i = bS (deps0, url)) !== false) return map (deps0[i], IP, 200);
+        if ((i = bS (dps0, url)) !== false) return map (dps0[i], IP, 200);
 
         // The user agent's page requested a dependency
-        else if ((i = bS (deps1, aURL)) !== false) return [deps1[i], 200];
+        else if ((i = bS (dps1, aURL)) !== false) return [dps1[i], 200];
 
         // The user agent lazily typed the request, and it matches a valid path to an index.html file
-        else if ((i = bS (deps0, idxStr)) !== false) return map (deps0[i], IP, 200);
+        else if ((i = bS (dps0, idxStr)) !== false) return map (dps0[i], IP, 200);
 
         // The user agent lazily typed the request, and it might match a valid path to an html file
-        else if (deps0.length) {for (i = 0; i < deps0.length; i++) if (deps0[i].match (/\\.html$/)) return map (deps0[i], IP, 200);}
+        else if (dps0.length) {for (i = 0; i < dps0.length; i++) if (dps0[i].match (/\\.html$/)) return map (dps0[i], IP, 200);}
 
         // The user agent might have requested a completely non-existent URL, but the error page is requesting dependencies
         else errdep = errorMatch (url, IP);
@@ -214,7 +220,7 @@ var NL = /%0A/g,  SPACE = /%20/g, BTICK = /%60/g, HTAG = /%23/g,  MNY = /%24/g, 
     AT = /%40/g,  CRRT = /%5E/g;
 
 /* Internal server error page */
-var _500Page = '' + fs.readFileSync ('./dependencies/500.html');
+var _500Page = fs.readFileSync ('./dependencies/500.html');
 
 /* Mapping of file extensions to their corresponding MIME type */
-var extensionMap = JSON.parse ('' + fs.readFileSync ('./dependencies/mimeobj.json'));
+var extensionMap = JSON.parse (fs.readFileSync ('./dependencies/mimeobj.json'));

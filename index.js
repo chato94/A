@@ -116,7 +116,7 @@ function DirSpace () {
             return i === j? a[i] === o? i : f : a[m] === o? m : a[m] > o? s(a, o, i, m - 1) : s(a, o, m + 1, j);
         }
 
-        return s (a, o, 0, a.length - 1);
+        return s(a, o, 0, a.length - 1);
     }
 
     // Maps the master page of the incoming IP address if the URL is an HTML file
@@ -140,23 +140,23 @@ function DirSpace () {
 
     // Attempts to match the raw URL directly from the request with a directory found in 
     this.match = function (rURL, IP) {
-        var def = ['/404', '/index.html'], rx = /\/[^/]+/g, errdep = true;
+        var def = ['/404', '/index.html'], rx = /\/[^/]+/g, errdep = false;
 
         var url = decodeURL (rURL), aURL = mrg (url, IP), 
             sgs0 = url.match (rx) || def, sgs1 = aURL.match (rx),
-            top0 = sgs0[0], top1 = sgs1[0], deps0 = root[top0] || [], deps1 = root[top1] || [], idxStr = url + def[1], i;
+            top0 = sgs0[0], top1 = sgs1[0], dps0 = root[top0] || [], dps1 = root[top1] || [], idxStr = url + def[1], i;
 
         // The user agent requested a perfect path to the file
-        if ((i = bS (deps0, url)) !== false) return map (deps0[i], IP, 200);
+        if ((i = bS (dps0, url)) !== false) return map (dps0[i], IP, 200);
 
         // The user agent's page requested a dependency
-        else if ((i = bS (deps1, aURL)) !== false) return [deps1[i], 200];
+        else if ((i = bS (dps1, aURL)) !== false) return [dps1[i], 200];
 
         // The user agent lazily typed the request, and it matches a valid path to an index.html file
-        else if ((i = bS (deps0, idxStr)) !== false) return map (deps0[i], IP, 200);
+        else if ((i = bS (dps0, idxStr)) !== false) return map (dps0[i], IP, 200);
 
         // The user agent lazily typed the request, and it might match a valid path to an html file
-        else if (deps0.length) {for (i = 0; i < deps0.length; i++) if (deps0[i].match (/\\.html$/)) return map (deps0[i], IP, 200);}
+        else if (dps0.length) {for (i = 0; i < dps0.length; i++) if (dps0[i].match (/\\.html$/)) return map (dps0[i], IP, 200);}
 
         // The user agent might have requested a completely non-existent URL, but the error page is requesting dependencies
         else errdep = errorMatch (url, IP);
@@ -171,10 +171,9 @@ function DirSpace () {
 
 /* console.log alias functions */
 function $ (m) {console.log (m);}
-var N = '\n', TB = '    ', 
-    $n = function () {for (var i = 0, a = arguments; i < a.length; i++) $(N+a[i]);}, 
-    $t = function () {for (var i = 0, a = arguments; i < a.length; i++) $(TB+a[i]);}, 
-    $nt = function () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $(TB+a[i]) : $(N+TB+a[i]);};
+function $n () {for (var i = 0, a = arguments; i < a.length; i++) $('\n' + a[i]);}
+function $t () {for (var i = 0, a = arguments; i < a.length; i++) $('    ' + a[i]);}
+function $nt () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $('    ' + a[i]) : $('\n    ' + a[i]);}
 
 /* Utilizes the comprehensive extension map to return the appropriate MIME type of a file */
 function MIMEType (file) {
@@ -192,7 +191,7 @@ function decodeURL (url) {
             .replace (GT, '>')  .replace (AND, '&')  .replace (PLUS, '+')   .replace (OBRCE, '{')  .replace (CBRCE, '}')
             .replace (AT, '@')  .replace (MNY, '$')  .replace (PIPE, '|')   .replace (FSLSH, '/')  .replace (CRRT, '^')
             .replace (QM, '?')  .replace (DQT, '"')  .replace (SQT, "'")    .replace (SCLN, ';')   .replace (BSLSH, '\\')
-            .replace (NL, N)    .replace (CLN, ':')  .replace (BTICK, '`')  .replace (CBRKT, ']')  .replace (COMMA, ',');
+            .replace (NL, '\n') .replace (CLN, ':')  .replace (BTICK, '`')  .replace (CBRKT, ']')  .replace (COMMA, ',');
 }
 
 /* Lets new RegExp match for the complete literal of the input string */
@@ -213,7 +212,7 @@ var NL = /%0A/g,  SPACE = /%20/g, BTICK = /%60/g, HTAG = /%23/g,  MNY = /%24/g, 
     AT = /%40/g,  CRRT = /%5E/g;
 
 /* Internal server error page */
-var _500Page = '' + fs.readFileSync ('./500.html');
+var _500Page = fs.readFileSync ('./500.html');
 
 /* Mapping of file extensions to their corresponding MIME type */
-var extensionMap = JSON.parse ('' + fs.readFileSync ('./mimeobj.json'));
+var extensionMap = JSON.parse (fs.readFileSync ('./mimeobj.json'));

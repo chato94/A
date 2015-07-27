@@ -9,11 +9,6 @@ Now would be a good time to start adding support for databases, and then dynamic
 page construction, which means many more functions still for dynamic features. As
 always, all in due time, of course.
 
-## Temporary Update
-I have decided to re-factor the directory watcher, and thus will need much updating
-for the `index.js` file. In the mean time, use an old, functioning version of the
-server.
-
 ## Summary
 It is the refactored<sup>2</sup> version of **A Server 3.1**, which was coded using
 Dropbox and a lot of patience. Hopefully, this server will simply be a plug and play
@@ -39,7 +34,7 @@ All previous solutions to the static file server problem focused on calculating
 the path to the file on the machine from the request URL from the client. While
 this solution worked for **A Server 2.0**, it made it extremely cumbersome to
 add more dynamic functionality to the server. I am currently taking a new approach
-to the problem and using the `child_process` to simply poll the directory every x
+to the problem and using the `child_process` library to simply poll the directory every x
 seconds (tbd) to detect file changes, and then just have the list ready to go
 in the parent process to simplify URL decoding and exception-making. This will
 come at the cost of hogging up the hard drive, but with faster solid-state drives,
@@ -58,5 +53,12 @@ documentation, Stack Overflow, and scratch (no, not MIT's Scratch).
 * Add all files and folders to serve in the same directory as the index.js file.
   * You still have to have an HTML file in the directory. If none is found, the 404 page is served.
     * It takes priority for an `index.html` file, then serves the first HTML file it finds. There are no guarantees that HTML files will be found in any specified order.
+  * GET request URL processing happens in the following priorities:
+    1. Attempts to match the path perfectly. If this fails then...
+    2. Attempts to match a dependency from the top folder of the HTML file. If this fails then...
+    3. Attempts to match with an `index.html` file. If this fails then...
+    4. Attempts to match any `....html` file. If this fails then...
+    5. Attempts to strip the URL until it matches a dependency in the 404 folder. If this fails then...
+    6. It serves the /404/index.html file with a 404 error code (all others are code 200).
 
 * Once ready to run, run the `index.js` file and from there, websites can be accessed from the IP address logged on the terminal's stdout.

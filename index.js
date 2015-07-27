@@ -70,7 +70,7 @@ function respondTo (url, response, IP, content, code, mime) {
     var ip = IP + ') ';
     $nt(ip+'respondTo - Finalizing the response for: ' + url, ip+'Status Code: ' + code);
     response.writeHead (code, {'Content-Type': mime});
-    response.write (content, function () {$n('*** Finished the response for ' + IP + ' ***')});
+    response.write (content, function () {$n('*** Finished the response for ' + IP + ' ***'); response.end ();});
 }
 
 /***************************************************************************************************
@@ -81,7 +81,7 @@ dirWatcher.on ('message', function (m) {
     if (m[0] === 'Update Mapping') {
         if (!receivedInit) receivedInit = true;
         root = m[1];
-        $(root);
+        //$(root);
         d.update ();
     }
 });
@@ -99,6 +99,8 @@ function killChildrenAndExit () {
 /************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE HELPER FUNCTIONS AND ALIASES FOR REPEATED FUNCTIONS LIKE LOGGING *
  ************************************************************************************************/
+Array.prototype.toString = function () {var s = ''; for (var i = 0; i < this.length; i++) s += i > 0? ', ' + this[i] : this[i]; return '[' + s + ']'};
+
 /* Handles bad URL error filtering for the 404 page by keeping track of the valid directories */
 function DirSpace () {
 
@@ -107,8 +109,9 @@ function DirSpace () {
 
         // Binary search worker function
         function s (a, me, i, j) {
-            var m = Math.floor ((i + j) / 2), t = true, f = false, l = a.length;
-            return !l || i > j? f : i === j? a[i] === o? i : f : a[m] === o? m : a[m] > o? s(a, o, i, m - 1) : s(a, o, m + 1, j);
+            if (!a || !a.length || i > j) return false;
+            var m = Math.floor ((i + j) / 2), t = true, f = false;
+            return i === j? a[i] === o? i : f : a[m] === o? m : a[m] > o? s(a, o, i, m - 1) : s(a, o, m + 1, j);
         }
 
         return s (a, o, 0, a.length - 1);
@@ -120,41 +123,60 @@ function DirSpace () {
     // Merges the input URL with the master map if it exists; returns the input URL as-is otherwise
     function mrg (url, IP) {return cPM[IP]? cPM[IP] + url : url;}
 
-    // Attempts to match the raw URL directly from the request with a directory found in 
-    this.match = function (rawURL, IP) {
-        var url = decodeURL (rawURL), sgs = url.match (/\/[^/]+/g) || ['/404', '/index.html'], top = sgs[0], 
-            appendStr = mrg (url, IP), idxStr = url + '/index.html', deps = root[top] || [], i;
+    function errorMatch (rURL, IP) {
+        var deps = root['/404'] || [], segs = rURL.match (/\/[^/]+/g);
+        $t('errorMatch - deps: ' + deps, 'errorMatch - segs: ' + segs);
+        while (segs.length > 1) {
+            var url = '/404' + segs.splice (1, segs.length - 1).join (''), i;
+            $t('errorMatch - url: ' + url);
+            if ((i = bS (deps, url)) !== false) return map (deps[i], IP, 200);
+        }
+        return false;
+    }
 
-        $nt('url: ' + url, 'appendStr: ' + appendStr, 'idxStr: ' + idxStr, 'deps: [' + deps + ']');
-        $t('0: ' + bS (deps, url), '1: ' + bS (deps, appendStr), '2: ' + bS (deps, idxStr), '3: ' + deps.length);
+    // Attempts to match the raw URL directly from the request with a directory found in 
+    this.match = function (rURL, IP) {
+        var def = ['/404', '/index.html'], rx = /\/[^/]+/g, errdep = true;
+
+        var url = decodeURL (rURL), aURL = mrg (url, IP), 
+            sgs0 = url.match (rx) || def, sgs1 = aURL.match (rx),
+            top0 = sgs0[0], top1 = sgs1[0], deps0 = root[top0] || [], deps1 = root[top1] || [], idxStr = url + def[1], i;
+
+        /** Debugging logs
+        $nt('url: ' + url, 'aURL: ' + aURL, 'idxStr: ' + idxStr, 'top0: ' + top0, 'top1: ' + top1, 'deps0: [' + deps0 + ']', 'deps1: [' + deps1 + ']');
+        $nt('0: ' + bS (deps0, url), '1: ' + bS (deps1, aURL), '2: ' + bS (deps0, idxStr), '3: ' + deps0.length);**/
 
         // The user agent requested a perfect path to the file
-        if ((i = bS (deps, url)) !== false) {
-            $t('Perf');
-            return map (deps[i], IP, 200);
+        if ((i = bS (deps0, url)) !== false) {
+            //$t('Perf');
+            return map (deps0[i], IP, 200);
         }
 
         // The user agent's page requested a dependency
-        else if ((i = bS (deps, appendStr)) !== false) {
-            $t('Dep');
-            return [deps[i], 200];
+        else if ((i = bS (deps1, aURL)) !== false) {
+            //$t('Dep');
+            return [deps1[i], 200];
         }
 
         // The user agent lazily typed the request, and it matches a valid path to an index.html file
-        else if ((i = bS (deps, idxStr)) !== false) {
-            $t('Idx');
-            return map (deps[i], IP, 200);
+        else if ((i = bS (deps0, idxStr)) !== false) {
+            //$t('Idx');
+            return map (deps0[i], IP, 200);
         }
 
         // The user agent lazily typed the request, and it might match a valid path to an html file
-        else if (deps.length) {
-            $t('Test Idx');
-            for (i = 0; i < deps.length; i++) if (deps[i].match (/\\.html$/)) return map (deps[i], IP, 200);
+        else if (deps0.length) {
+            //$t('Test Idx');
+            for (i = 0; i < deps0.length; i++) if (deps0[i].match (/\\.html$/)) return map (deps0[i], IP, 200);
         }
 
+        // The user agent might have requested a completely non-existent URL, but the error page is requesting dependencies
+        else errdep = errorMatch (url, IP);
+
         // The user agent requested a path that does not exist in the current state of the directory
-        $t('404');
-        return map ('/404/index.html', IP, 404);
+        //$t('404');
+        $t('errdep: ' + errdep);
+        return errdep || map ('/404/index.html', IP, 404);
     };
 
     // Used to update the internal array of all /404 directories, and to log that child process has updated root

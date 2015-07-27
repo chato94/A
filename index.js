@@ -15,7 +15,7 @@ var root = {}, d = new DirSpace (), receivedInit = false;
 var cPM = {};
 
 /* Wait until first update of directories to start serving files */
-var int = setInterval (function () {if (receivedInit) server = http.createServer (fHTTP).listen (PORT, S_IP, BACKLOG, iS);}, 250);
+var int = setInterval (function () {if (receivedInit) server = http.createServer (fHTTP).listen (PORT, S_IP, BACKLOG, iS);}, 300);
 
 /* Server initialization function */
 function iS () {
@@ -45,7 +45,17 @@ function fHTTP (rq, rs) {
 }
 
 function POSTHandler (request, response, IP) {
+    // http://stackoverflow.com/questions/4295782/how-do-you-extract-post-data-in-node-js
+    var body = '';
+    var html0 = '<!DOCTYPE html><html><h2>POST Request Heard!</h2><h4>Query String: ',
+        html1 = '</h4><p>Stay tuned for more later.</p></html>';
 
+    $nt('POST Methods are coming soon. Sending an HTML response for now to ' + IP);
+
+    request.on ('data', function (data) {body += data;});
+    request.on ('end', function () {
+        respondTo (request.url, response, IP, html0 + body + html1, 200, 'text/html');
+    });
 }
 
 function GETHandler (request, response, IP) {
@@ -81,7 +91,6 @@ dirWatcher.on ('message', function (m) {
     if (m[0] === 'Update Mapping') {
         if (!receivedInit) receivedInit = true;
         root = m[1];
-        //$(root);
         d.update ();
     }
 });

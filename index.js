@@ -21,6 +21,7 @@ var int = setInterval (function () {if (receivedInit) server = http.createServer
 function iS () {
     $('** The server is up and running! Listening to requests at ' + S_IP + ' on port ' + PORT + ' **\n');
     clearInterval (int);
+    int = null;
 }
 
 /* Gets the IPv4 address of the machine running the server */

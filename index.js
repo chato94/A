@@ -28,9 +28,7 @@ function localIPAddress () {
     var a, i, p, j;
     for (p in Int) {
         i = Int[p];
-        for (j = 0; j < i.length; j++) if (a = i[j], a.family === 'IPv4' && a.address !== L && !a.internal) {
-            return a.address;
-        }
+        for (j = 0; j < i.length; j++) if (a = i[j], a.family === 'IPv4' && a.address !== L && !a.internal) {return a.address;}
     } return Z;
 }
 
@@ -66,18 +64,18 @@ function GETHandler (request, response, IP) {
     read (url, response, IP, code);
 }
 
-/* Handles any calls that were guaranteed to work in theory, but somehow failed */
-function send500 (url, response, IP, error) {
-    $nt(IP + ') send500 - An error occurred while serving: ' + url);
-    respondTo (url, response, IP, _500Page, 500, 'text/html');
-}
-
 /* Handles any calls to the fs library to read a file in the specified path */
 function read (url, response, IP, code) {
     $nt(IP + ') read - Attempting to read the file in: ' + url);
     fs.readFile (url, function (error, content) {
         error? send500 (url, response, IP, error) : respondTo (url, response, IP, content, code, MIMEType (path.basename (url)));
     });
+}
+
+/* Handles any calls that were guaranteed to work in theory, but somehow failed */
+function send500 (url, response, IP, error) {
+    $nt(IP + ') send500 - An error occurred while serving: ' + url);
+    respondTo (url, response, IP, _500Page, 500, 'text/html');
 }
 
 /* Handles responding to a request with the input arguments */
@@ -126,7 +124,7 @@ function DirSpace () {
             return i === j? a[i] === o? i : f : a[m] === o? m : a[m] > o? s(a, o, i, m - 1) : s(a, o, m + 1, j);
         }
 
-        return s (a, o, 0, a.length - 1);
+        return s(a, o, 0, a.length - 1);
     }
 
     // Maps the master page of the incoming IP address if the URL is an HTML file
@@ -151,7 +149,7 @@ function DirSpace () {
         var def = ['/404', '/index.html'], rx = /\/[^/]+/g, errdep = true;
 
         var url = decodeURL (rURL), aURL = mrg (url, IP), 
-            sgs0 = url.match (rx) || def, sgs1 = aURL.match (rx),
+            sgs0 = url.match (rx) || def, sgs1 = aURL.match (rx) || def,
             top0 = sgs0[0], top1 = sgs1[0], dps0 = root[top0] || [], dps1 = root[top1] || [], idxStr = url + def[1], i;
 
         // The user agent requested a perfect path to the file
@@ -174,7 +172,7 @@ function DirSpace () {
     };
 
     // Used to update the internal array of all /404 directories, and to log that child process has updated root
-    this.update = function () {$n('##################################### UPDATED ROOT #####################################\n');};
+    this.update = function () {$nt(' #################################### UPDATED ROOT ####################################\n');};
 }
 
 /* console.log alias functions */

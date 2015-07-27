@@ -125,10 +125,11 @@ function DirSpace () {
 
     function errorMatch (rURL, IP) {
         var deps = root['/404'] || [], segs = rURL.match (/\/[^/]+/g);
-        $t('errorMatch - deps: ' + deps, 'errorMatch - segs: ' + segs);
+        //$t('errorMatch - deps: ' + deps, 'errorMatch - segs: ' + segs);
         while (segs.length > 1) {
-            var url = '/404' + segs.splice (1, segs.length - 1).join (''), i;
-            $t('errorMatch - url: ' + url);
+            segs.splice (0, 1);
+            var url = '/404' + segs.join (''), i;
+            //$t('errorMatch - url: ' + url, 'errorMatch - segs [w]: ' + segs);
             if ((i = bS (deps, url)) !== false) return map (deps[i], IP, 200);
         }
         return false;
@@ -175,7 +176,7 @@ function DirSpace () {
 
         // The user agent requested a path that does not exist in the current state of the directory
         //$t('404');
-        $t('errdep: ' + errdep);
+        //$t('errdep: ' + errdep);
         return errdep || map ('/404/index.html', IP, 404);
     };
 

@@ -156,7 +156,7 @@ function DirSpace () {
         else if ((i = bS (deps0, idxStr)) !== false) return map (deps0[i], IP, 200);
 
         // The user agent lazily typed the request, and it might match a valid path to an html file
-        else if (deps0.length) for (i = 0; i < deps0.length; i++) if (deps0[i].match (/\\.html$/)) return map (deps0[i], IP, 200);
+        else if (deps0.length) {for (i = 0; i < deps0.length; i++) if (deps0[i].match (/\\.html$/)) return map (deps0[i], IP, 200);}
 
         // The user agent might have requested a completely non-existent URL, but the error page is requesting dependencies
         else errdep = errorMatch (url, IP);

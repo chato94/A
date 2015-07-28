@@ -1,67 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>The Garlic Router</title>
-        <script>
-        	/**
-        	 * Taken from https://github.com/jfriend00/docReady/blob/master/docready.js
-			 *
-			 * Copies jQuery's 'ready' function without the entire library breathing down
-			 * the website's neck.
-        	 */
-        	(function (func, obj) {
-        		'use strict';
-        		func = func || 'domReady';
-        		obj = obj || window;
-        		var readyList = [], readyFired = false, installed = false;
 
-        		function ready () {
-        			if (!readyFired) {
-        				readyFired = true;
-        				for (var i = 0; i < readyList.length; i++) readyList[i].fs.call (window, readyList[i].ctx);
-        			}
-        			readyList = [];
-        		}
+<head>
+<!-- TODO: Come up with a better name for this welcome page. -->
+<title>The Garlic Router</title>
 
-        		function readyStateChange () {
-        			if (document.readyStat === 'complete') ready ();
-        		}
+<!-- Attempt to make things work with good ol' IE8 and below -->
+<!--[if lte IE 8]><script type="text/javascript" src="js/excanvas.min.js"></script><![endif]-->
 
-        		obj[func] = function (callback, context) {
-        			if (readyFired) {
-        				setTimeout (function () {callback (context);}, 1);
-        				return;
-        			} else {
-        				readyList.push ({fn: callback, ctx: context});
-        			}
+<!-- CSS to make things ever so slightly pretty -->
+<style>
+    #background {
+        left: 0;
+        margin: 0;
+        padding: 0;
+        position: fixed;
+        top: 0;
+        z-index: -1;
+    }
 
-        			if (document.readyState === 'complete' || (!document.attachEvent && document.readyState === 'interactive')) {
-        				setTimeout (ready, 1);
-        			} else if (!installed) {
-        				if (document.addEventListener) {
-        					document.addEventListener ('DOMContentLoaded', ready, false);
-        					window.addEventListener ('load', ready, false);
-        				} else {
-        					document.attachEvent ('onreadystatechange', readyStateChange);
-        					window.attachEvent ('onload', ready);
-        				}
-        				installed = true;
-        			}
-        		};
-        	})('domReady', window);
+    .logging {
+        font-family: 'Consolas', 'Courier New', monospace;
+        margin: 0;
+        padding: 0;
+    }
 
-        	/* Script for the website --> Let's try to stick to VanillaJS (r) this time. */
-        	domReady (function () {
-        		var canvas = document.getElementByID ('background'), ctx = canvas.getContext ('2d');
-        	});
-        </script>
-    </head>
-    <body>
-    	<canvas id="background"></canvas>
-        <h2>Welcome, young grasshopper.</h2>
-        <p>
-            There's nothing fancy to see here yet (which is a good thing). Check out the 404 page though. That
-            thing is legit.
-        </p>
-    </body>
+    p span.logging {
+        color: #55ACEE;
+    }
+</style>
+
+<!-- Bits and bytes that make the page do this and that -->
+<script>
+/**
+ * Taken from https://github.com/jfriend00/docReady/blob/master/docready.js
+ *
+ * Copies jQuery's 'ready' function without the entire library breathing down
+ * the website's neck.
+ */
+(function (func, obj) {
+    'use strict';
+    func = func || 'domReady';
+    obj = obj || window;
+    var readyList = [], readyFired = false, installed = false;
+
+    function ready () {
+        if (!readyFired) {
+            readyFired = true;
+            for (var i = 0; i < readyList.length; i++) readyList[i].fn.call (window, readyList[i].ctx);
+        }
+        readyList = [];
+    }
+
+    function readyStateChange () {
+        if (document.readyStat === 'complete') ready ();
+    }
+
+    obj[func] = function (callback, context) {
+        if (readyFired) {
+            setTimeout (function () {callback (context);}, 1);
+            return;
+        } else {
+            readyList.push ({fn: callback, ctx: context});
+        }
+
+        if (document.readyState === 'complete' || (!document.attachEvent && document.readyState === 'interactive')) {
+            setTimeout (ready, 1);
+        } else if (!installed) {
+            if (document.addEventListener) {
+                document.addEventListener ('DOMContentLoaded', ready, false);
+                window.addEventListener ('load', ready, false);
+            } else {
+                document.attachEvent ('onreadystatechange', readyStateChange);
+                window.attachEvent ('onload', ready);
+            }
+            installed = true;
+        }
+    };
+})('domReady', window);
+
+/******************************************************************************************
+ * NECESSARY DOM-READY VARIABLES, AND CODE EXECUTION FOR THE FUNCTIONALITY OF THE WEBSITE *
+ ******************************************************************************************/
+domReady (function () {
+    var canvas = document.getElementById ('background'), ctx = canvas.getContext ('2d');
+
+    ctx.canvas.width = window.innerWidth;
+    ctx.canvas.height = window.innerHeight;
+
+    // Animates random squircles on the page of random sizes at random positions of random shades of grey
+    (function animateSquircles () {
+        var v = randomSquircle (), x = v[0], y = v[1], s = v[2], r = v[3], c = v[4];
+        var bg = 'rgba(255, 255, 255, 0.075)', chance = Math.random ();
+
+        ctx.fillStyle = bg;
+        ctx.fillRect (0, 0, canvas.width, canvas.height);
+
+        // Don't spam the background at every frame
+        if (chance <= 0.03) {
+            console.log ('c: ' + c);
+            ctx.fillStyle = c;
+            ctx.roundRect (x, y, s, s, r, true, false);
+        }
+
+        // Continue the animation
+        reqAnimFr (animateSquircles);
+    })();
+ 
+    var w = document.getElementById ('width'), h = document.getElementById ('height');
+    w.innerHTML = window.innerWidth + 'px';
+    h.innerHTML = window.innerHeight + 'px';
+
+    // Attach all necessary event listeners to their corresponding objects
+    addEvent (window, 'resize', resizeCanvas);
+    addEvent (document, 'mousemove', mouseMove);
+});
+
+/**************************************************
+ * THE FOLLOWING ARE THE FUNCTIONS UNDER THE HOOD *
+ **************************************************/
+/* Attaches a custom listener to any object, and works as a cross-browser VanillaJS implementation */
+function addEvent (obj, type, cback) {
+    // Code is taken from Alex V. at http://stackoverflow.com/questions/641857/javascript-window-resize-event
+    if (obj && type && cback) {
+        // IE Normalization
+        obj.addEventListener? obj.addEventListener (type, cback, false) : obj.attachEvent? obj.attachEvent ('on' + type, cback) : obj['on' + type] = cback;
+    }
+}
+
+/* Handles the event that fires when the mouse moves */
+function mouseMove (event) {
+    // Code is taken from T.J. Crowder at http://stackoverflow.com/questions/7790725/javascript-track-mouse-position
+    var eventDoc, doc, body, pageX, pageY;
+    event = event || window.event;
+
+    // IE Normalization
+    if (event.pageX == null && event.clientX != null) {
+        eventDoc = (event.target && event.target.ownerDocument) || document;
+        doc = eventDoc.documentElement;
+        body = eventDoc.body;
+        event.pageX = event.clientX + (doc && doc.scrollLeft || body && body.scrollLeft || 0) - (doc && doc.clientLeft || body && body.clientLeft || 0);
+        event.pageY = event.clientY + (doc && doc.scrollTop || body && body.scrollTop || 0) - (doc && doc.clientTop || body && body.clientTop || 0);
+    }
+
+    var mX = document.getElementById ('mX'), mY = document.getElementById ('mY');
+    mX.innerHTML = event.pageX + 'px';
+    mY.innerHTML = event.pageY + 'px';
+}
+
+/* Resizes the background canvas to the new window width and height values */
+function resizeCanvas () {
+    var canvas = document.getElementById ('background'), ctx = canvas.getContext ('2d');
+    ctx.canvas.width = window.innerWidth;
+    ctx.canvas.height = window.innerHeight;    
+
+    var w = document.getElementById ('width'), h = document.getElementById ('height');
+    w.innerHTML = window.innerWidth + 'px';
+    h.innerHTML = window.innerHeight + 'px';
+}
+
+/* Allows for support of squircles in the canvas --> x, y, width, height, radius, fill, stroke */
+CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r, f, s) {
+    // Code taken from Juan Mendez at http://js-bits.blogspot.com/2010/07/canvas-rounded-corner-rectangles.html
+    if (arguments.length < 5) r = 5;
+    if (arguments.length < 6) f = true;
+
+    // Begin by moving the pen to the desired coordinate (x, y)
+    this.beginPath ();
+    this.moveTo (x + r, y);
+
+    // Draws the first line-to-curve
+    this.lineTo (x + w - r, y);
+    this.quadraticCurveTo (x + w, y, x + w, y + r);
+
+    // Draws the second line-to-curve
+    this.lineTo (x + w, y + h - r);
+    this.quadraticCurveTo (x + w, y + h, x + w - r, y + h);
+
+    // Draws the third line-to-curve
+    this.lineTo (x + r, y + h);
+    this.quadraticCurveTo (x, y + h, x, y + h - r);
+
+    // Draws the fourth and final line-to-curve
+    this.lineTo (x, y + r);
+    this.quadraticCurveTo (x, y, x + r, y);
+
+    // Finishing the path with specified args
+    this.closePath ();
+    if (s) this.stroke ();
+    if (f) this.fill (); 
+};
+
+/* Randomly generates the necessary variables to draw random squircles on the screen */
+function randomSquircle () {
+    var w = window.innerWidth, h = window.innerHeight, x = w * Math.random (), y = h * Math.random (), c = Math.floor (255 * Math.random ()),
+        m = Math.floor (Math.min (w, h) / 3), s = Math.floor (Math.random () * m), r = 0.05 * s;
+    x -= Math.floor (0.5 * s);
+    y -= Math.floor (0.5 * s);
+    return [x, y, s, r, 'rgb(' + c + ', ' + c + ', ' + c + ')'];
+}
+
+/* Cross-browser solution to requestAnimationFrame */
+var reqAnimFr = function () {
+    var w = window, n = 'equestAnimationFrame';
+    return w['r' + n] || w['webkitR' + n] || w['mozR' + n] || w['msR' + n] || w['-oR' + n] || w['oR' + n] || function (fn) {setTimeout (fn, 17)};
+}();
+</script>
+
+</head>
+
+<!-- Actual HTML code. Holy wowzerz! -->
+<body>
+    <canvas id="background"></canvas>
+    <h2>Welcome, young grasshopper.</h2>
+    <p>
+        There's nothing fancy to see here yet (which is a good thing as it's been extremely difficult to get this page to show up correctly in the
+        first place). In the mean time, I suggest checking out the 404 error page. That thing is eye candy. You can get there by typing in whatever
+        you want after the IP address in the top bar (except for <span class="logging">/init/index.html</span> or <span class="logging">/init</span>).
+    </p>
+    <p class="logging">Window width: <span id="width">0px</span>; Window height: <span id="height">0px</span></p>
+    <p class="logging">MouseX: <span id="mX">0px</span>; MouseY: <span id="mY">0px</span></p>
+</body>
+
 </html>

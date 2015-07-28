@@ -25,6 +25,10 @@
         padding: 0;
     }
 
+    .px {
+    	color: green;
+    }
+
     p span.logging {
         color: #55ACEE;
     }
@@ -108,8 +112,8 @@ domReady (function () {
     })();
  
     var w = document.getElementById ('width'), h = document.getElementById ('height');
-    w.innerHTML = window.innerWidth + 'px';
-    h.innerHTML = window.innerHeight + 'px';
+    w.innerHTML = window.innerWidth;
+    h.innerHTML = window.innerHeight;
 
     // Attach all necessary event listeners to their corresponding objects
     addEvent (window, 'resize', resizeCanvas);
@@ -144,8 +148,8 @@ function mouseMove (event) {
     }
 
     var mX = document.getElementById ('mX'), mY = document.getElementById ('mY');
-    mX.innerHTML = event.pageX + 'px';
-    mY.innerHTML = event.pageY + 'px';
+    mX.innerHTML = event.pageX;
+    mY.innerHTML = event.pageY;
 }
 
 /* Resizes the background canvas to the new window width and height values */
@@ -155,8 +159,8 @@ function resizeCanvas () {
     ctx.canvas.height = window.innerHeight;    
 
     var w = document.getElementById ('width'), h = document.getElementById ('height');
-    w.innerHTML = window.innerWidth + 'px';
-    h.innerHTML = window.innerHeight + 'px';
+    w.innerHTML = window.innerWidth;
+    h.innerHTML = window.innerHeight;
 }
 
 /* Allows for support of squircles in the canvas --> x, y, width, height, radius, fill, stroke */
@@ -205,6 +209,11 @@ var reqAnimFr = function () {
     var w = window, n = 'equestAnimationFrame';
     return w['r' + n] || w['webkitR' + n] || w['mozR' + n] || w['msR' + n] || w['-oR' + n] || w['oR' + n] || function (fn) {setTimeout (fn, 17)};
 }();
+
+/* Transforms a point about the specified point (c0, c1) */
+function rotate (i, j, r, c0, c1) {
+	return [i * Math.cos (r) - j * Math.sin (r) + c0, i * Math.sin (r) + j * Math.cos (r) + c1];
+}
 </script>
 
 </head>
@@ -218,8 +227,8 @@ var reqAnimFr = function () {
         first place). In the mean time, I suggest checking out the 404 error page. That thing is eye candy. You can get there by typing in whatever
         you want after the IP address in the top bar (except for <span class="logging">/init/index.html</span> or <span class="logging">/init</span>).
     </p>
-    <p class="logging">Window width: <span id="width">0px</span>; Window height: <span id="height">0px</span></p>
-    <p class="logging">MouseX: <span id="mX">0px</span>; MouseY: <span id="mY">0px</span></p>
+    <p class="logging">Window width: <span id="width">0</span><span class="px">px</span>; Window height: <span id="height">0</span><span class="px">px</span></p>
+    <p class="logging">MouseX: <span id="mX">0</span><span class="px">px</span>; MouseY: <span id="mY">0</span><span class="px">px</span></p>
 </body>
 
 </html>

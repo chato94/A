@@ -153,13 +153,14 @@ domReady (function () {
 
     ctx.canvas.width = window.innerWidth;
     ctx.canvas.height = window.innerHeight;
+    ctx.globalAlpha = 1;
     
     if (!mobile) {
         mCtx.canvas.width = window.innerWidth;
         mCtx.canvas.height = window.innerHeight;
     }
 
-    var np = 25, rds = 55, pts0 = genPoints (np, rds), pts1 = genPoints (np, 0.75 * rds), pts2 = genPoints (np, 0.5 * rds), framenum = 0;
+    var np = 25, rds = 55, pts0 = genPoints (np, rds), pts1 = genPoints (np, 0.75 * rds), pts2 = genPoints (np, 0.5 * rds), framenum = 0, wipeBg = false, doneWiping = true;
     // Animates random squircles on the page of random sizes at random positions of random shades of grey
     (function animateBg () {
         // Update the frame number
@@ -169,14 +170,26 @@ domReady (function () {
         var v = randomSquircle (), x = v[0], y = v[1], s = v[2], r = v[3], c = v[4];
         var bg = 'rgba(255, 255, 255, 0.01)', chance = Math.random ();
 
-        ctx.fillStyle = bg;
-        ctx.fillRect (0, 0, canvas.width, canvas.height);
+        if (!wipeBg) {
+        	ctx.beginPath ();
+	        ctx.fillStyle = bg;
+	        ctx.fillRect (0, 0, canvas.width, canvas.height);
 
-        // Don't spam the background at every frame
-        if (chance <= 0.9999) {
-            ctx.fillStyle = c;
-            ctx.roundRect (x, y, s, s, r, true, false);
-        }
+	        // Don't spam the background at every frame
+	        if (chance <= 0.9999) {
+	            ctx.fillStyle = c;
+	            ctx.roundRect (x, y, s, s, r, true, false);
+	        }
+    	} else {
+    		//alert ('clear!');
+    		ctx.globalAlpha -= 1 / 60;
+    		if (ctx.globalAlpha < 1 / 60) {
+    			ctx.globalAlpha = 0;
+    			ctx.clearRect (0, 0, canvas.width, canvas.height);
+    			ctx.globalAlpha = 1;
+    			doneWiping = true;
+    		}
+    	}
 
         if (!mobile) {
             // Animates the dots surrounding the mouse
@@ -211,6 +224,14 @@ domReady (function () {
             theta += 1 / 15;
         }
 
+        // Clear the background every 600 frames
+        if (framenum % 60 === 0 && doneWiping) {
+        	wipeBg = true;
+        	doneWiping = false;
+        } else if (doneWiping && wipeBg) {
+        	wipeBg = false;
+        }
+
         // Continue the animation
         reqAnimFr (animateBg);
     })();
@@ -222,6 +243,7 @@ domReady (function () {
     // Attach all necessary event listeners to their corresponding objects
     addEvent (window, 'resize', resizeCanvas);
     addEvent (document, 'mousemove', mouseMove);
+    addEvent (document, 'click', click);
 });
 
 /**************************************************
@@ -260,11 +282,18 @@ function mouseMove (event) {
     mY.innerHTML = event.pageY;
 }
 
+/* Handles the event that fires when an object is clicked */
+function click (event) {
+	var element = event.target;
+
+}
+
 /* Resizes the background canvas to the new window width and height values */
 function resizeCanvas () {
     var canvas = document.getElementById ('background'), ctx = canvas.getContext ('2d');
     ctx.canvas.width = window.innerWidth;
     ctx.canvas.height = window.innerHeight;
+    ctx.globalAlpha = 1;
 
     if (!mobile) {
         var mCanvas = document.getElementById ('mouseflair'), mCtx = mCanvas.getContext ('2d');

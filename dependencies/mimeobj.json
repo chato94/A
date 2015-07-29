@@ -218,6 +218,7 @@
 	 ".hps": "application/vnd.hp-hps",
 	 ".hqx": "application/mac-binhex40",
 	 ".htke": "application/vnd.kenameaapp",
+	 ".htm": "text/html",
 	 ".html": "text/html",
 	 ".hvd": "application/vnd.yamaha.hv-dic",
 	 ".hvp": "application/vnd.yamaha.hv-voice",

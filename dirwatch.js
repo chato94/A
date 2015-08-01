@@ -6,8 +6,9 @@
  * upon detection of a file change. Note that this does not scale well with
  * many files to keep track of.
  */
-var fs = require ('fs'), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/',
-allPaths = bfs (__dirname), dRGX = new RegExp ('^' + deRegEx (__dirname)), SECONDS = 0.25, p = process;
+var fs = require ('fs'), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', pth = __dirname + S,
+p0 = pth + 'static', p1 = pth + 'init', p2 = pth + '404', allPaths = bfs (p0, p1, p2),
+dRGX = new RegExp ('^' + deRegEx (__dirname)), SECONDS = 0.25, p = process;
 console.log ('\n"dirwatch.js" child process started!');
 
 allPaths.sort ();
@@ -16,7 +17,7 @@ process.send (concat (allPaths));
 updatePaths ();
 
 function updatePaths () {
-    var d = bfs (__dirname);
+    var d = bfs (p0, p1, p2);
 
     // Small optimization for speedup of directory equality checking
     d.length !== allPaths.length? _true () : _false ();
@@ -57,8 +58,9 @@ function concat (array) {
 }
 
 /* Recursive breadth-first search that constructs a list of all files relative to __dirname */
-function bfs (dirStr, exceptions) {
-    var dirs = [dirStr], all = [], dir;
+function bfs () {
+    var dirs = [], all = [], dir;
+    for (var i = 0; i < arguments.length; i++) dirs.push (arguments[i]);
 
     function bfsWorker (path) {
         try {

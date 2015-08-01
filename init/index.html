@@ -160,7 +160,7 @@ domReady (function () {
         mCtx.canvas.height = window.innerHeight;
     }
 
-    var np = 25, rds = 55, pts0 = genPoints (np, rds), pts1 = genPoints (np, 0.75 * rds), pts2 = genPoints (np, 0.5 * rds), framenum = 0, wipeBg = false, doneWiping = true;
+    var np = 25, rds = 60, pts0 = genPoints (np, rds), pts1 = genPoints (np, 0.75 * rds), pts2 = genPoints (np, 0.5 * rds), framenum = 0;
     // Animates random squircles on the page of random sizes at random positions of random shades of grey
     (function animateBg () {
         // Update the frame number
@@ -168,28 +168,17 @@ domReady (function () {
 
         // Animates the squircles in the background
         var v = randomSquircle (), x = v[0], y = v[1], s = v[2], r = v[3], c = v[4];
-        var bg = 'rgba(255, 255, 255, 0.01)', chance = Math.random ();
+        var bg = 'rgba(255, 255, 255, 0.05)', chance = Math.random ();
 
-        if (!wipeBg) {
-        	ctx.beginPath ();
-	        ctx.fillStyle = bg;
-	        ctx.fillRect (0, 0, canvas.width, canvas.height);
+    	ctx.beginPath ();
+        ctx.fillStyle = bg;
+        ctx.fillRect (0, 0, canvas.width, canvas.height);
 
-	        // Don't spam the background at every frame
-	        if (chance <= 0.9999) {
-	            ctx.fillStyle = c;
-	            ctx.roundRect (x, y, s, s, r, true, false);
-	        }
-    	} else {
-    		//alert ('clear!');
-    		ctx.globalAlpha -= 1 / 60;
-    		if (ctx.globalAlpha < 1 / 60) {
-    			ctx.globalAlpha = 0;
-    			ctx.clearRect (0, 0, canvas.width, canvas.height);
-    			ctx.globalAlpha = 1;
-    			doneWiping = true;
-    		}
-    	}
+        // Don't spam the background at every frame
+        if (chance <= 0.125) {
+            ctx.fillStyle = c;
+            ctx.roundRect (x, y, s, s, r, true, false);
+        }
 
         if (!mobile) {
             // Animates the dots surrounding the mouse
@@ -222,14 +211,6 @@ domReady (function () {
                 mCtx.fill ();
             }
             theta += 1 / 15;
-        }
-
-        // Clear the background every 600 frames
-        if (framenum % 60 === 0 && doneWiping) {
-        	wipeBg = true;
-        	doneWiping = false;
-        } else if (doneWiping && wipeBg) {
-        	wipeBg = false;
         }
 
         // Continue the animation
@@ -341,7 +322,7 @@ CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r, f, s) {
 /* Randomly generates the necessary variables to draw random squircles on the screen */
 function randomSquircle () {
     var w = window.innerWidth, h = window.innerHeight, x = w * Math.random (), y = h * Math.random (), c = Math.floor (255 * Math.random ()),
-        m = Math.floor (Math.min (w, h) / 10), s = Math.floor (Math.random () * m), r = 0.05 * s;
+        m = Math.floor (Math.min (w, h) / 5), s = Math.floor (Math.random () * m), r = 0.05 * s;
     x -= Math.floor (0.5 * s);
     y -= Math.floor (0.5 * s);
     return [x, y, s, r, 'rgb(' + c + ', ' + c + ', ' + c + ')'];

@@ -191,7 +191,8 @@ function MIMEType (file) {
 /* Converts the URL encoding to the literal string representation */
 function decodeURL (url) {
     // Convert the initial request into a directory that actually exists
-    var temp = url === '/' || url === '/index.html'? '/init/index.html' : url.match (/^\/404|^\/init/)? url : '/static' + url, u = temp.replace (SPACE, ' ');
+    var temp = url === '/' || url === '/index.html'? '/init/index.html' : url.match (/^\/404|^\/init/)? url : '/static' + url,
+        u = temp.replace (SPACE, ' ');
     
     // Convert URL encodings to their literal string representations and return the value
     return u.replace (LT, '<')  .replace (EQ, '=')   .replace (OBRKT, '[')  .replace (HTAG, '#')   .replace (PSNT, '%')

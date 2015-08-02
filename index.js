@@ -132,7 +132,7 @@ function DirSpace () {
     function map (url, IP, code) {if (path.basename (url).match (/\.html$/)) cPM[IP] = path.dirname (url); return [url, code];}
 
     // Merges the input URL with the master map if it exists; returns the input URL as-is otherwise
-    function mrg (url, IP) {return cPM[IP]? cPM[IP] + url : url;}
+    function mrg (url, IP) {return cPM[IP]? url.match (/^\/static/)? cPM[IP] + url.substr (7) : cPM[IP] + url : url;}
 
     // Filters the input URL such that only the dependency remains if possible, false otherwise
     function errorMatch (rURL, IP) {
@@ -191,7 +191,7 @@ function MIMEType (file) {
 /* Converts the URL encoding to the literal string representation */
 function decodeURL (url) {
     // Convert the initial request into a directory that actually exists
-    var temp = url === '/' || url === '/index.html'? '/init/index.html' : url, u = temp.replace (SPACE, ' ');
+    var temp = url === '/' || url === '/index.html'? '/init/index.html' : url.match (/^\/404|^\/init/)? url : '/static' + url, u = temp.replace (SPACE, ' ');
     
     // Convert URL encodings to their literal string representations and return the value
     return u.replace (LT, '<')  .replace (EQ, '=')   .replace (OBRKT, '[')  .replace (HTAG, '#')   .replace (PSNT, '%')

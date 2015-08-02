@@ -50,7 +50,7 @@ documentation, Stack Overflow, and scratch (no, not MIT's Scratch).
 ## Instructions
 *These instructions assume that Node is already installed on the machine and all necessary paths are correctly configured.*
 
-* Add all files and folders to serve in the same directory as the index.js file.
+* Add all files and folders to serve into the `static` folder.
   * You still have to have an HTML file in the directory. If none is found, the 404 page is served.
     * It takes priority for an `index.html` file, then serves the first HTML file it finds. There are no guarantees that HTML files will be found in any specified order.
   * GET request URL processing happens in the following priorities:
@@ -62,3 +62,4 @@ documentation, Stack Overflow, and scratch (no, not MIT's Scratch).
     6. It serves the /404/index.html file with a 404 error code (all others are code 200).
 
 * Once ready to run, run the `index.js` file and from there, websites can be accessed from the IP address logged on the terminal's stdout.
+* Note that you can make any mofications necessary to the `/init` and `/404` directories, just not delete them.

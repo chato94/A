@@ -1,10 +1,9 @@
 /**
- * Polls the server directory every second to detect a file change independently
+ * Polls the server directory every 'x' seconds to detect a file change independently
  * of the parent process.
  *
- * Sends a string of double quote-space separated paths to the parent process
- * upon detection of a file change. Note that this does not scale well with
- * many files to keep track of.
+ * Sends a mapping of top folders to the parent process with a sorted array of all valid
+ * files found in that top folder
  */
 var fs = require ('fs'), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', pth = __dirname + S,
 p0 = pth + 'static', p1 = pth + 'init', p2 = pth + '404', allPaths = bfs (p0, p1, p2),
@@ -67,8 +66,8 @@ function bfs () {
             dir = fs.readdirSync (path);
             dir.length? (function () {for (var i = 0; i < dir.length; i++) dirs.push (path + S + dir[i]);})() : null;
         } catch (error) {
-            error.code === 'ENOTDIR'? all.push (path/* + ':FILE'*/) : console.log ('UNKNOWN ERROR OCCURRED:\n' + error + '\n');
-        } 
+            error.code === 'ENOTDIR'? all.push (path/* + ':FILE'*/) : console.log ('AN UNKNOWN ERROR OCCURRED:\n' + error + '\n');
+        }
 
         if (dirs.length) bfsWorker (dirs.splice (0, 1)[0]);
     }

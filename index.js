@@ -1,9 +1,11 @@
 /*********************************************************************************************
  * THE FOLLOWING ARE REQUIRED Node.js LIBRARIES AND GLOBAL VARIABLES FOR STATIC FILE SERVING *
  *********************************************************************************************/
+$('Command line args: ' + (process.argv.length - 2));
+
 var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process'),
     Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', S_IP = localIPAddress (),
-    PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0', server;
+    PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0', verbose = false, debug = false, server;
 
 /* Fork all necessary child processes */
 var dirWatcher = cp.fork (__dirname + '/dirwatch.js');
@@ -33,13 +35,21 @@ function localIPAddress () {
     } return Z;
 }
 
+/* Sets the logging flags to specify how much to log to the console from the command line arguments */
+var dMssg = 0, aMssg = '\nAll Valid Arguments: -v[erbose], -d[ebug]', uA = '    Unknown Argument', args = process.argv;
+for (var i = 2; i < args.length; i++) {
+    if (args[i].match (/-?v(erbose)?$/i)) verbose = true;
+    else if (args[i].match (/-?d(ebug)?$/i)) debug = true;
+    else dMssg? $(uA + (i+1) + ': "' + args[i] + '"'):(function(){$(aMssg); dMssg = 1; $(uA + (i+1) + ': "' + args[i] + '"');})();
+}
+
 /***********************************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE THE TREE-LIKE FLOW OF CALLBACKS THAT STEM FROM CLIENT REQUESTS FOR THE SERVER TO HANDLE *
  ***********************************************************************************************************************/
 /* Function from which all other callbacks execute */
 function fHTTP (rq, rs) {
     var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress;
-    $n('\n*** fHTTP - Incoming request heard! Initializing response for ' + IP + ' ***');
+    $n('\n*** ' + fN (fHTTP) + 'Incoming request heard! Initializing response for ' + IP + ' ***');
     rq.method === 'GET'? GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
 }
 
@@ -60,14 +70,15 @@ function POSTHandler (request, response, IP) {
 
 /* Root function of the GET request handling function tree */
 function GETHandler (request, response, IP) {
-    var ip = IP + ') ', wrap = d.match (request.url, IP), url = '.' + wrap[0], code = wrap[1];
-    $nt(ip+'GETHandler - Detected a GET request!', ip+'Raw URL: ' + request.url, ip+'Filtered URL: ' + url);
+    var ip = IP + ') ' + fN (GETHandler), wrap = d.match (request.url, IP), url = '.' + wrap[0], code = wrap[1];
+    $nt(ip + 'Detected a GET request!', ip+'Raw URL: ' + request.url, ip+'Filtered URL: ' + url);
     read (url, response, IP, code);
 }
 
 /* Handles any calls to the fs library to read a file in the specified path */
 function read (url, response, IP, code) {
-    $nt(IP + ') read - Attempting to read the file in: ' + url);
+    var ip = IP + ') ' + fN (read);
+    $dnt(ip + 'Attempting to read the file in: ' + url);
     fs.readFile (url, function (error, content) {
         error? send500 (url, response, IP, error) : respondTo (url, response, IP, content, code, MIMEType (path.basename (url)));
     });
@@ -75,14 +86,15 @@ function read (url, response, IP, code) {
 
 /* Handles any calls that were guaranteed to work in theory, but somehow failed */
 function send500 (url, response, IP, error) {
-    $nt(IP + ') send500 - An error occurred while serving: ' + url);
+    var ip = IP + ') ' + fN (send500);
+    $nt(ip + 'An error occurred while serving: ' + url);
     respondTo (url, response, IP, _500Page, 500, 'text/html');
 }
 
 /* Handles responding to a request with the input arguments */
 function respondTo (url, response, IP, content, code, mime) {
-    var ip = IP + ') ';
-    $nt(ip+'respondTo - Finalizing the response for: ' + url, ip+'Status Code: ' + code);
+    var ip = IP + ') ' + fN (respondTo);
+    $nt(ip + 'Finalizing the response for: ' + url, ip+'Status Code: ' + code);
     response.writeHead (code, {'Content-Type': mime});
     response.write (content, function () {$n('*** Finished the response for ' + IP + ' ***'); response.end ();});
 }
@@ -129,29 +141,51 @@ function DirSpace () {
     }
 
     // Maps the master page of the incoming IP address if the URL is an HTML file
-    function map (url, IP, code) {if (path.basename (url).match (/\.html$/)) cPM[IP] = path.dirname (url); return [url, code];}
+    function map (url, IP, code) {
+        var ip = IP + ') (anon) DirSpace.map-> ';
+        if (path.basename (url).match (/\.html$/)) {
+            $dnt(ip + 'url: ' + url, ip + 'code: ' + code);
+            $dvnt(ip + 'Re-mapping the url "' + cPM[IP] + '" to "' + path.dirname (url) + '"');
+            cPM[IP] = path.dirname (url);
+        }
+        $dvnt(ip + '');
+        return [url, code];
+    }
 
     // Merges the input URL with the master map if it exists; returns the input URL as-is otherwise
-    function mrg (url, IP) {return cPM[IP]? url.match (/^\/static/)? cPM[IP] + url.substr (7) : cPM[IP] + url : url;}
+    function mrg (url, IP) {
+        $dvnt(IP + ') (anon) DirSpace.mrg->' + url, IP + ') (anon) DirSpace.mrg->' + IP);
+        return cPM[IP]? url.match (/^\/static/)? cPM[IP] + url.substr (7) : cPM[IP] + url : url;
+    }
 
     // Filters the input URL such that only the dependency remains if possible, false otherwise
     function errorMatch (rURL, IP) {
-        var deps = root['/404'] || [], segs = rURL.match (/\/[^/]+/g);
+        var deps = root['/404'] || [], segs = rURL.match (/\/[^/]+/g), dStr = IP + ') (anon) DirSpace.errorMatch ';
+
+        $dnt(dStr + 'deps: ' + deps, dStr + 'segs: ' + segs);
+
         while (segs.length > 1) {
             segs.splice (0, 1);
             var url = '/404' + segs.join (''), i;
             if ((i = bS (deps, url)) !== false) return map (deps[i], IP, 200);
         }
+
+        $dvnt(IP + ') no match for rURL "' + rURL + '" in /404');
+
         return false;
     }
 
     // Attempts to match the raw URL directly from the request with a directory found in 
     this.match = function (rURL, IP) {
-        var def = ['/404', '/index.html'], rx = /\/[^/]+/g, errdep = true;
+        var def = ['/404', '/index.html'], rx = /\/[^/]+/g;
 
         var url = decodeURL (rURL), aURL = mrg (url, IP), 
             sgs0 = url.match (rx) || def, sgs1 = aURL.match (rx) || def,
             top0 = sgs0[0], top1 = sgs1[0], dps0 = root[top0] || [], dps1 = root[top1] || [], idxStr = url + def[1], i;
+
+        $dvnt(IP + ') - d.match');
+        $dnt('rURL: '+rURL,'url: '+url,'aURL: '+aURL,'idxStr: '+idxStr,'sgs0: '+sgs0,'sgs1: '+sgs1,'dps0 ->'+dps0,'dps1 ->'+dps1);
+        $dnt('1: '+bS (dps0, url), '2: '+bS (dps1, aURL), '3: '+bS (dps0, idxStr), '4: '+dps0.length, '5: '+errorMatch (url, IP));
 
         // The user agent requested a perfect path to the file
         if ((i = bS (dps0, url)) !== false) return map (dps0[i], IP, 200);
@@ -165,11 +199,9 @@ function DirSpace () {
         // The user agent lazily typed the request, and it might match a valid path to an html file
         else if (dps0.length) {for (i = 0; i < dps0.length; i++) if (dps0[i].match (/\\.html$/)) return map (dps0[i], IP, 200);}
 
-        // The user agent might have requested a completely non-existent URL, but the error page is requesting dependencies
-        else errdep = errorMatch (url, IP);
-
-        // The user agent requested a path that does not exist in the current state of the directory
-        return errdep || map ('/404/index.html', IP, 404);
+        // The user agent might have requested a completely non-existent URL, but the error page is requesting dependencies,
+        // or the user agent requested a path that does not exist in the current state of the directory
+        return errorMatch (url, IP) || map ('/404/index.html', IP, 404);
     };
 
     // Used to update the internal array of all /404 directories, and to log that child process has updated root
@@ -180,7 +212,22 @@ function DirSpace () {
 function $ (m) {console.log (m);}
 function $n () {for (var i = 0, a = arguments; i < a.length; i++) $('\n' + a[i]);}
 function $t () {for (var i = 0, a = arguments; i < a.length; i++) $('    ' + a[i]);}
-function $nt () {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $('    ' + a[i]) : $('\n    ' + a[i]);}
+
+// Only prints if the verbose flag is true
+function $nt () {if (verbose) {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $('    ' + a[i]) : $('\n    ' + a[i]);}}
+
+// Only prints if the debug flag is true
+function $dnt () {if (debug) {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $('    ' + a[i]) : $('\n    ' + a[i]);}}
+
+// Only prints if both the verbose and debug flags are true
+function $dvnt () {
+    if (debug && verbose) {for (var i = 0, a = arguments; i < a.length; i++) i > 0? $('    ' + a[i]) : $('\n    ' + a[i]);}
+}
+
+/* Returns the function name to concatenate to logging based on the debug variable */
+function fN (f) {
+    return debug? (f.toString ().replace (/^function\s/, '').match (/^[^(]+\(/) || ['('])[0].replace (/\s*?\($/, '') + ' - ' : '';
+}
 
 /* Utilizes the comprehensive extension map to return the appropriate MIME type of a file */
 function MIMEType (file) {
@@ -224,3 +271,10 @@ var _500Page = fs.readFileSync ('./dependencies/500.html');
 
 /* Mapping of file extensions to their corresponding MIME type */
 var extensionMap = JSON.parse (fs.readFileSync ('./dependencies/mimeobj.json'));
+
+/* Changing the way that Array.prototype.toString behaves for better logging on the console */
+Array.prototype.toString = function () {
+    var s = '', idt = '\n        ';
+    for (var i = 0; i < this.length; i++) s += i > 0? ',' + idt + this[i] : idt + this[i];
+    return '[' + s + '\n    ]';
+};

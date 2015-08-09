@@ -334,7 +334,7 @@ var reqAnimFr = function () {
     return w['r' + n] || w['webkitR' + n] || w['mozR' + n] || w['msR' + n] || w['-oR' + n] || w['oR' + n] || function (fn) {setTimeout (fn, 17)};
 }();
 
-/* Transforms a point about the specified point (c0, c1) */
+/* Rotates a point about the specified point (c0, c1) and scales the x (y) component by sx (sy) */
 function rotate (p, r, c0, c1, sx, sy) {
     if (arguments.length < 5) sx = sy = 1;
     else if (arguments.length < 6) sy = 1;

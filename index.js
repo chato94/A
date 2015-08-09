@@ -8,7 +8,7 @@ var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = 
     PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0', verbose = false, debug = false, server;
 
 /* Fork all necessary child processes */
-var dirWatcher = cp.fork (__dirname + '/dirwatch.js');
+var dirWatcher = cp.fork (__dirname + '/dirwatch.js'), dataBases = {}, dbID = 0;
 
 /* All available files and directories relative to this file */
 var root = {}, d = new DirSpace (), receivedInit = false;
@@ -56,15 +56,35 @@ function fHTTP (rq, rs) {
 /* Root function of the POST request handling function tree */
 function POSTHandler (request, response, IP) {
     // http://stackoverflow.com/questions/4295782/how-do-you-extract-post-data-in-node-js
-    var body = '';
-    var html0 = '<!DOCTYPE html><html><h2>POST Request Heard!</h2><h4>Query String: ',
-        html1 = '</h4><p>Stay tuned for more later.</p></html>';
+    var url = decodeURL (request.url).replace (/^\//, ''), body = '', ONE_MB = 1048576;
 
-    $nt('POST Methods are coming soon. Sending an HTML response for now to ' + IP);
+    // Parses the incoming data to the body variable
+    request.on ('data', function (data) {
+        body += data;
+        if (body.length > ONE_MB) request.connection.destroy ();
+    });
 
-    request.on ('data', function (data) {body += data;});
+    // Processes the parsed body query string
     request.on ('end', function () {
-        respondTo (request.url, response, IP, html0 + body + html1, 200, 'text/html');
+        $nt(IP + ') POST request body finished parsing');
+        $dnt(IP + ') url: ' + url, IP + ') body: ' + body);
+        if (url.match (/\.dbaccess$/)) {
+            var thisID = dbID++;
+
+            $dnt ('thisID: ' + thisID);
+            dataBases[thisID] = cp.fork (__dirname + '/dependencies/database.js', ['' + verbose, '' + debug]);
+            dataBases[thisID].send ([url, body]);
+
+            dataBases[thisID].on ('message', function (m) {
+                respondTo (url, response, IP, m, 200, 'text/html');
+                dataBases[thisID].kill ();
+                dataBases[thisID] = null;
+            });
+        } else {
+            $nt(IP + ') POST request was heard, but was of an unknown type');
+            var html = uPOSTPage.replace (/#/, body);
+            respondTo (url, response, IP, html, 404, 'text/html');
+        }
     });
 }
 
@@ -80,6 +100,10 @@ function read (url, response, IP, code) {
     var ip = IP + ') ' + fN (read);
     $dnt(ip + 'Attempting to read the file in: ' + url);
     fs.readFile (url, function (error, content) {
+        // Add web identification to .dbaccess forms in HTML files
+        //if (url.match (/\.html$/)) content = content.replace (/(<\s*(form|input).+(form)?action\s*?=\s*?").+(\..+\.dbaccess")/i)
+
+        // Change all XMLHttp .dbaccess requests in JavaScript files
         error? send500 (url, response, IP, error) : respondTo (url, response, IP, content, code, MIMEType (path.basename (url)));
     });
 }
@@ -102,7 +126,7 @@ function respondTo (url, response, IP, content, code, mime) {
 /***************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE FUNCTIONS THAT HANDLE CHILD PROCESSES AND CLEAN PROCESS TERMINATION *
  ***************************************************************************************************/
-/* Handle incoming messages from child processes */
+// Handles all changes made to the static, init, and 404 directories
 dirWatcher.on ('message', function (m) {
     if (m[0] === 'Update Mapping') {
         if (!receivedInit) receivedInit = true;
@@ -116,6 +140,11 @@ process.on ('SIGINT', killChildrenAndExit);
 
 function killChildrenAndExit () {
     dirWatcher.kill ();
+
+    for (var i = 0; i < dbID; i++) {
+        if (dataBases[i]) dataBases[i].kill ();
+    }
+
     $n('CLEANLY TERMINATED ALL COMMANDS AND NOW EXITING THE SERVER PROGRAM.');
     process.exit ();
 }
@@ -179,7 +208,7 @@ function DirSpace () {
     this.match = function (rURL, IP) {
         var def = ['/404', '/index.html'], rx = /\/[^/]+/g;
 
-        var url = decodeURL (rURL), aURL = mrg (url, IP), 
+        var url = sDecodeURL (rURL), aURL = mrg (url, IP), 
             sgs0 = url.match (rx) || def, sgs1 = aURL.match (rx) || def,
             top0 = sgs0[0], top1 = sgs1[0], dps0 = root[top0] || [], dps1 = root[top1] || [], idxStr = url + def[1], i;
 
@@ -235,12 +264,16 @@ function MIMEType (file) {
     return extensionMap[extension] || 'text/plain';
 }
 
-/* Converts the URL encoding to the literal string representation */
+/* Quietly attaches the "/static" directory to non-"/404" and non-"/init" queries and returns the string literal of request.url */
+function sDecodeURL (url) {
+    var i = '/index.html';    
+    return decodeURL (url === '/' || url === i? '/init' + i : url.match (/^\/404|^\/init/)? url : '/static' + url);
+}
+
+/* Returns the string literal of the encoded request.url */
 function decodeURL (url) {
-    // Convert the initial request into a directory that actually exists
-    var temp = url === '/' || url === '/index.html'? '/init/index.html' : url.match (/^\/404|^\/init/)? url : '/static' + url,
-        u = temp.replace (SPACE, ' ');
-    
+    var u = url.replace (SPACE, ' ');
+
     // Convert URL encodings to their literal string representations and return the value
     return u.replace (LT, '<')  .replace (EQ, '=')   .replace (OBRKT, '[')  .replace (HTAG, '#')   .replace (PSNT, '%')
             .replace (GT, '>')  .replace (AND, '&')  .replace (PLUS, '+')   .replace (OBRCE, '{')  .replace (CBRCE, '}')
@@ -266,8 +299,11 @@ var NL = /%0A/g,  SPACE = /%20/g, BTICK = /%60/g, HTAG = /%23/g,  MNY = /%24/g, 
     CLN = /%3A/g, SCLN = /%3B/g,  DQT = /%22/g,   SQT = /%27/g,   LT = /%3C/g,    GT = /%3E/g,   COMMA = /%2C/g, QM = /%3F/g, 
     AT = /%40/g,  CRRT = /%5E/g;
 
-/* Internal server error page */
+/* Internal static server error page */
 var _500Page = fs.readFileSync ('./dependencies/500.html');
+
+/* Internal unknown form error page */
+var uPOSTPage = '' + fs.readFileSync ('./dependencies/UnknownPOSTForm.html');
 
 /* Mapping of file extensions to their corresponding MIME type */
 var extensionMap = JSON.parse (fs.readFileSync ('./dependencies/mimeobj.json'));

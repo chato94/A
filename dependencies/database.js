@@ -27,7 +27,11 @@ process.on ('message', function (m) {
         $nt('The command given to this database.js instance does not match any implemented command');
         $dnt('command: ' + command, 'usr: ' + usr, 'pass: ' + pass, 'arg2: ' + arg2, 'arg3: ' + arg3);
         return '{"label": "CDNE", "content": ""}';
-    })(q.username || q.usr, q.password || q.pass, q.newpassword || q.newpass || q.datakey || q.dkey, q.datakeyval || q.dkeyval));
+    }) (q.username || q.usr,
+        q.password || q.pass,
+        q.newpassword || q.npass || q.newusr || q.nusr || q.datakey || q.dkey ||
+            (q.multidata && JSON.parse (q.multidata)) || (q.mdata && JSON.parse (q.mdata)),
+        q.datakeyval || q.dkval));
 });
 
 /**
@@ -42,16 +46,40 @@ var handlers = {
         var dir = [], fol = './db/' + website, user = usr + '.user';
         try {
             dir = fs.readdirSync (fol);
-            for (var i = 0; i < dir.length; i++) if (dir[i] === user) return '{"label": "AE", "content": ""}';
+
+            // Linear search for 
+            for (var i = 0; i < dir.length; i++) {
+                if (dir[i] === user) {
+                    // Make sure that the name matched is actually a file and not a directory
+                    try {
+                        fs.readFileSync (fol + '/' + user);
+                        return '{"label": "AE", "content": ""}';
+
+                    // Delete the directory and make the file, or return the ERR label upon unexpected error
+                    } catch (err) {
+                        if (err.code === 'EISDIR') {
+                            fs.unlinkSync (fol + '/' + user);
+                            return handlers['createuser'] (usr, pass);
+                        } else {
+                            $dnt('handlers[createuser] linear search::', 'err.code: ' + err.code);
+                            $dvnt('error:\n' + error + '\n');
+                            return '{"label": "ERR", "content": ""}';
+                        }
+                    }
+                }
+            }
 
             // The for loop did not return, therefore create the user
             var slt = salt (), hash = sha256 (pass + slt), content = '{hash: "' + hash + '", salt: "' + slt + '"}',
                 fd = open (fol + user, 'w'), buffer = new Buffer (content), BUFFER_POSITION = 0, FILE_POSTION = null;
 
-            fs.writeSync (fd, buffer, BUFFER_POSITION, buffer.length, FILE_POSTION);
-            fs.closeSync (fd);
+            if (fd) {
+                fs.writeSync (fd, buffer, BUFFER_POSITION, buffer.length, FILE_POSTION);
+                fs.closeSync (fd);
+                return '{"label": "OK", "content": ""}';
+            }
 
-            return '{"label": "OK", "content": ""}';
+            return '{"label": "ERR", "content": ""}';
 
         // The user does not exist in the website's directory in /dependencies/db, so create the account    
         } catch (error) {
@@ -78,11 +106,12 @@ var handlers = {
         var status = validate (usr, pass)[0];
         if (status === 'OK') {
             try {
+                $nt('Deleting user "' + usr + '" from the ' + website + ' database.');
                 fs.unlinkSync ('./db/' + website + '/' + usr);
                 return '{"label": "OK", "content": ""}';
             } catch (err) {
                 $nt('There was an unknown error deleting the approved user');
-                $dnt('usr: ' + usr, 'err.code: ' + err.code);
+                $dnt('handlers[deleteuser]::', 'usr: ' + usr, 'err.code: ' + err.code);
                 $dvnt('err:\n' + err + '\n');
                 return '{"label": "ERR", "content": ""}';
             }
@@ -93,11 +122,12 @@ var handlers = {
         var validation = validate (usr, pass), status = validation[0], content = validation[1];
         if (status === 'OK') {
             try {
+                $nt('Re-naming user "' + usr + '" to "' + nName '"');
                 fs.renameSync ('./db/' + website + '/' + usr, './db/' + website + '/' + nName + '.user');
                 return '{"label": "OK", "content": ""}';
             } catch (err) {
                 $nt('There was an error (most likely a data race renaming a user file');
-                $dnt('usr: ' + usr, 'nName: ' + nName, 'err.code: ' + err.code);
+                $dnt('handlers.changename::', 'usr: ' + usr, 'nName: ' + nName, 'err.code: ' + err.code);
                 $dvnt('error:\n' + err + '\n');
                 return '{"label": "ERR", "content": ""}';
             }
@@ -106,6 +136,27 @@ var handlers = {
 
     changepassword: function (usr, pass, nPass) {
         var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        if (status === 'OK') {
+            try {
+                var fd = open ('./db/' + website + '/' + usr + '.user', 'w');
+                if (fd) {
+                    var slt = salt (), hash = sha256 (nPass + slt);
+                    content['hash'] = hash;
+                    content['salt'] = slt;
+
+                    var buffer = new Buffer (JSON.stringify (content)), BUFFER_POSITION = 0, FILE_POSTION = null;
+                    fs.writeSync (fd, buffer, BUFFER_POSITION, buffer.length, FILE_POSTION)
+                    fs.closeSync (fd);
+                    return '{"label": "OK", "content": ""}';
+                }
+
+                $nt('There was an error using the file descriptor in changepassword');
+                $dnt('user: ' + usr, 'fd: ' + fd);
+                return '{"label": "ERR", "content": ""}';
+            } catch (err) {
+
+            }
+        } return '{"label": "' + status + '", "content": ""}';
     },
 
     extractalldata: function (usr, pass) {
@@ -116,14 +167,34 @@ var handlers = {
         var validation = validate (usr, pass), status = validation[0], content = validation[1];
     },
 
+    multistoredata: function (usr, pass, obj) {
+        var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        if (status === 'OK') {
+            try {
+                $nt('Storing/changing multiple data entries for user "' + usr + '"');
+                for (var i in obj) {
+
+                }
+            }
+        } return '{"label": "' + status + '", "content": ""}';
+    }
+
     storedata: function (usr, pass, key, val) {
         var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        if (status === 'OK') {
+            try {
+                $nt('Storing/changing data for usr "' + usr + '"');
+
+            } catch (err) {
+
+            }
+        } return '{"label": "' + status + '", "content": ""}';
     }
 }
 
 /* Validates a user and a password by reading the stored JSON buffer */
 function validate (usr, pass) {
-    var fol = './db/' + website + '/' + usr, status = 'BAD', content = '';
+    var fol = './db/' + website + '/' + usr + '.user', status = 'BAD', content = '';
 
     try {
         content = JSON.parse ('' + fs.readFileSync (fol));
@@ -156,7 +227,6 @@ function validate (usr, pass) {
 /* Synchronously opens the file in the specified with the specified mode, and returns the file descriptor if successful */
 function open (path, mode) {
     try {
-        //var fd = fs.openSync (path, mode), buffer = str? new Buffer (str) : false, BUFFER_POSITION = 0, FILE_POSTION = null;
         return fs.openSync (path, mode);
     } catch (err) {
         switch (mode) {

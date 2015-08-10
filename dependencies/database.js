@@ -13,7 +13,7 @@ $dvnt('child database.js process started!');
 /**
  * All valid response labels:
  *     OK   - The command functioned as expected
- *     BAD  - The command failed because the username and/or password is bad
+ *     BAD  - The command failed because the username and/or password is bad, or requested hash/salt
  *     AE   - The account creation failed because the new username already exists
  *     ERR  - The server had an unexpected error
  *     CDNE - The command does not exist in the current configuration of database.js
@@ -26,10 +26,10 @@ process.on ('message', function (m) {
     process.send ((handlers[command] || function (usr, pass, arg2, arg3) {
         $nt('The command given to this database.js instance does not match any implemented command');
         $dnt('command: ' + command, 'usr: ' + usr, 'pass: ' + pass, 'arg2: ' + arg2, 'arg3: ' + arg3);
-        return '{"label": "CDNE", "content": ""}';
+        return '{"label": "CDNE"}';
     }) (q.username || q.usr,
         q.password || q.pass,
-        q.newpassword || q.npass || q.newusr || q.nusr || q.datakey || q.dkey ||
+        q.newpassword || q.npass || q.newusr || q.nusr || q.datakey.lower () || q.dkey.lower () ||
             (q.multidata && JSON.parse (q.multidata)) || (q.mdata && JSON.parse (q.mdata)),
         q.datakeyval || q.dkval));
 });
@@ -44,6 +44,7 @@ var handlers = {
     createuser: function (usr, pass) {
         // Make sure that the directory exists first
         var dir = [], fol = './db/' + website, user = usr + '.user';
+        $dvnt('createuser called!');
         try {
             dir = fs.readdirSync (fol);
 
@@ -53,7 +54,7 @@ var handlers = {
                     // Make sure that the name matched is actually a file and not a directory
                     try {
                         fs.readFileSync (fol + '/' + user);
-                        return '{"label": "AE", "content": ""}';
+                        return '{"label": "AE"}';
 
                     // Delete the directory and make the file, or return the ERR label upon unexpected error
                     } catch (err) {
@@ -63,7 +64,7 @@ var handlers = {
                         } else {
                             $dnt('handlers[createuser] linear search::', 'err.code: ' + err.code);
                             $dvnt('error:\n' + error + '\n');
-                            return '{"label": "ERR", "content": ""}';
+                            return '{"label": "ERR"}';
                         }
                     }
                 }
@@ -76,10 +77,10 @@ var handlers = {
             if (fd) {
                 fs.writeSync (fd, buffer, BUFFER_POSITION, buffer.length, FILE_POSTION);
                 fs.closeSync (fd);
-                return '{"label": "OK", "content": ""}';
+                return '{"label": "OK"}';
             }
 
-            return '{"label": "ERR", "content": ""}';
+            return '{"label": "ERR"}';
 
         // The user does not exist in the website's directory in /dependencies/db, so create the account    
         } catch (error) {
@@ -97,45 +98,48 @@ var handlers = {
 
                 default:
                     $dnt('unknown error (possibly using .writeSync): ' + error, 'error.code: ' + error.code);
-                    return '{"label": "ERR", "content": ""}';
+                    return '{"label": "ERR"}';
             }
         }
     },
 
     deleteuser: function (usr, pass) {
         var status = validate (usr, pass)[0];
+        $dvnt('deleteuser called!');
         if (status === 'OK') {
             try {
                 $nt('Deleting user "' + usr + '" from the ' + website + ' database.');
                 fs.unlinkSync ('./db/' + website + '/' + usr);
-                return '{"label": "OK", "content": ""}';
+                return '{"label": "OK"}';
             } catch (err) {
                 $nt('There was an unknown error deleting the approved user');
                 $dnt('handlers[deleteuser]::', 'usr: ' + usr, 'err.code: ' + err.code);
                 $dvnt('err:\n' + err + '\n');
-                return '{"label": "ERR", "content": ""}';
+                return '{"label": "ERR"}';
             }
-        } return '{"label": "' + status + '", "content": ""}';
+        } return '{"label": "' + status + '"}';
     },
 
     changename: function (usr, pass, nName) {
         var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        $dvnt('changename called!');
         if (status === 'OK') {
             try {
                 $nt('Re-naming user "' + usr + '" to "' + nName '"');
                 fs.renameSync ('./db/' + website + '/' + usr, './db/' + website + '/' + nName + '.user');
-                return '{"label": "OK", "content": ""}';
+                return '{"label": "OK"}';
             } catch (err) {
                 $nt('There was an error (most likely a data race renaming a user file');
                 $dnt('handlers.changename::', 'usr: ' + usr, 'nName: ' + nName, 'err.code: ' + err.code);
                 $dvnt('error:\n' + err + '\n');
-                return '{"label": "ERR", "content": ""}';
+                return '{"label": "ERR"}';
             }
-        } return '{"label": "' + status + '", "content": ""}';
+        } return '{"label": "' + status + '"}';
     },
 
     changepassword: function (usr, pass, nPass) {
         var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        $dvnt('changepassword called!');
         if (status === 'OK') {
             try {
                 var fd = open ('./db/' + website + '/' + usr + '.user', 'w');
@@ -147,55 +151,94 @@ var handlers = {
                     var buffer = new Buffer (JSON.stringify (content)), BUFFER_POSITION = 0, FILE_POSTION = null;
                     fs.writeSync (fd, buffer, BUFFER_POSITION, buffer.length, FILE_POSTION)
                     fs.closeSync (fd);
-                    return '{"label": "OK", "content": ""}';
+                    return '{"label": "OK"}';
                 }
 
                 $nt('There was an error using the file descriptor in changepassword');
-                $dnt('user: ' + usr, 'fd: ' + fd);
-                return '{"label": "ERR", "content": ""}';
+                $dnt('usr: ' + usr, 'fd: ' + fd);
             } catch (err) {
-
+                $nt('There was an error using fs.writeSync in changepassword');
+                $dnt('usr: ' + usr, 'err.code: ' + err.code);
+                $dvnt('err:\n' + err + '\n');
             }
-        } return '{"label": "' + status + '", "content": ""}';
+
+            // The fd was null, or there was an error using fs.writeSync
+            return '{"label": "ERR"}';
+        }
+
+        // The status was not originally "OK", so return the status without content
+        return '{"label": "' + status + '"}';
     },
 
     extractalldata: function (usr, pass) {
         var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        $dvnt('extractalldata called!');
+
+        if (status === 'OK' && key !== 'hash' && key !== 'salt') {
+            var extraction = {};
+            for (var i in content) {
+                if (content.hasOwnProperty (i) && (i !== 'hash' || i !== 'salt')) {
+                    extraction[i] = content[i];
+                }
+            }
+
+            return '{"label": "OK", "content": ' + JSON.stringify (extraction) + '}';
+        }
+
+        return '{"label": "' + status +'", "content": {}}';
     },
 
     extractdata: function (usr, pass, key) {
-        var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        $dvnt('extractdata called!');
+
+        // Take advantage of extractalldata as it is the same function, but with one key
+        return '{' + key + ': ' + (JSON.parse (handlers.extractalldata (usr, pass)).content[key] || '""') + '}';
     },
 
     multistoredata: function (usr, pass, obj) {
         var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        $dvnt('multistoredata called!');
         if (status === 'OK') {
             try {
                 $nt('Storing/changing multiple data entries for user "' + usr + '"');
                 for (var i in obj) {
-
+                    var prop = i.lower ();
+                    if (obj.hasOwnProperty (prop)) {
+                        content[prop] = obj[prop];
+                    }
                 }
+
+                var fd = open ('./db/' + website + '/' + usr + '.user', 'w'), buffer = new Buffer (JSON.stringify (content));
+                if (fd) {
+                    fs.writeSync (fd, buffer, BUFFER_POSITION, buffer.length, FILE_POSTION);
+                    fs.closeSync (fd);
+                    return '{"label": "OK"}';
+                }
+            } catch (err) {
+                $nt('There was an error using open, fs.writeSync, or fs.closeSync');
+                $dnt('usr: ' + usr, 'fd: ' + fd, 'err.code: ' + err.code);
+                $dvnt('error:\n' + error + '\n');
             }
-        } return '{"label": "' + status + '", "content": ""}';
+
+            // The password was verified, but there was an error using fs.open, write, or close
+            return '{"label": "ERR"}';
+        }
+
+        // The integrity of the password did not pass the verificaiton stage
+        return '{"label": "' + status + '"}';
     }
 
     storedata: function (usr, pass, key, val) {
-        var validation = validate (usr, pass), status = validation[0], content = validation[1];
-        if (status === 'OK') {
-            try {
-                $nt('Storing/changing data for usr "' + usr + '"');
+        $dvnt('storedata called!');
 
-            } catch (err) {
-
-            }
-        } return '{"label": "' + status + '", "content": ""}';
+        // Take advantage of multistoredata as it does the same function, but with one key-val pair
+        return handlers['multistoredata'] (usr, pass, {key: val});
     }
 }
 
 /* Validates a user and a password by reading the stored JSON buffer */
 function validate (usr, pass) {
     var fol = './db/' + website + '/' + usr + '.user', status = 'BAD', content = '';
-
     try {
         content = JSON.parse ('' + fs.readFileSync (fol));
         var hash = (content['hash'] || 'none'), salT = (content['salt'] || '');

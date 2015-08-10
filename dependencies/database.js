@@ -8,23 +8,26 @@
 var qs = require ('querystring'), fs = require ('fs'), website,
     args = process.argv, verbose = JSON.parse (args[2]), debug = JSON.parse (args[3]);
 
-$nt('child database.js process started!');
+$dvnt('child database.js process started!');
 
 /**
  * All valid response labels:
- *     OK  - The command functioned as expected
- *     BAD - The command failed because the username and/or password is bad
- *     AE  - The account creation failed because the new username already exists
- *     ERR - The server had an unexpected error
+ *     OK   - The command functioned as expected
+ *     BAD  - The command failed because the username and/or password is bad
+ *     AE   - The account creation failed because the new username already exists
+ *     ERR  - The server had an unexpected error
+ *     CDNE - The command does not exist in the current configuration of database.js
  */
 process.on ('message', function (m) {
-    var specs = m[0].match (/[^.]+/g), qry = qs.parse (m[1]), command = specs[1];
+    var specs = m[0].match (/[^.]+/g), q = qs.parse (m[1]), command = specs[1];
     website = specs[0];
 
-    // All responses are in JSON notation. Labels are "label" and queried content will be "content"
+    // All responses are strings in JSON notation. Labels are "label" and queried content will be "content"
     process.send ((handlers[command] || function (usr, pass, arg2, arg3) {
-
-    })(qry.username || qry.usr, qry.password || qry.pass, qry.newpassword || qry.newpass || qry.datakey, qry.datakeyval));
+        $nt('The command given to this database.js instance does not match any implemented command');
+        $dnt('command: ' + command, 'usr: ' + usr, 'pass: ' + pass, 'arg2: ' + arg2, 'arg3: ' + arg3);
+        return '{"label": "CDNE", "content": ""}';
+    })(q.username || q.usr, q.password || q.pass, q.newpassword || q.newpass || q.datakey || q.dkey, q.datakeyval || q.dkeyval));
 });
 
 /**
@@ -42,7 +45,7 @@ var handlers = {
             for (var i = 0; i < dir.length; i++) if (dir[i] === user) return '{"label": "AE", "content": ""}';
 
             // The for loop did not return, therefore create the user
-            var content = '{"password": "' + salt (pass) + '"}',
+            var slt = salt (), hash = sha256 (pass + slt), content = '{hash: "' + hash + '", salt: "' + slt + '"}',
                 fd = open (fol + user, 'w'), buffer = new Buffer (content), BUFFER_POSITION = 0, FILE_POSTION = null;
 
             fs.writeSync (fd, buffer, BUFFER_POSITION, buffer.length, FILE_POSTION);
@@ -72,52 +75,75 @@ var handlers = {
     },
 
     deleteuser: function (usr, pass) {
-
+        var status = validate (usr, pass)[0];
+        if (status === 'OK') {
+            try {
+                fs.unlinkSync ('./db/' + website + '/' + usr);
+                return '{"label": "OK", "content": ""}';
+            } catch (err) {
+                $nt('There was an unknown error deleting the approved user');
+                $dnt('usr: ' + usr, 'err.code: ' + err.code);
+                $dvnt('err:\n' + err + '\n');
+                return '{"label": "ERR", "content": ""}';
+            }
+        } return '{"label": "' + status + '", "content": ""}';
     },
 
     changename: function (usr, pass, nName) {
-
+        var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        if (status === 'OK') {
+            try {
+                fs.renameSync ('./db/' + website + '/' + usr, './db/' + website + '/' + nName + '.user');
+                return '{"label": "OK", "content": ""}';
+            } catch (err) {
+                $nt('There was an error (most likely a data race renaming a user file');
+                $dnt('usr: ' + usr, 'nName: ' + nName, 'err.code: ' + err.code);
+                $dvnt('error:\n' + err + '\n');
+                return '{"label": "ERR", "content": ""}';
+            }
+        } return '{"label": "' + status + '", "content": ""}';
     },
 
     changepassword: function (usr, pass, nPass) {
-
+        var validation = validate (usr, pass), status = validation[0], content = validation[1];
     },
 
     extractalldata: function (usr, pass) {
-
+        var validation = validate (usr, pass), status = validation[0], content = validation[1];
     },
 
     extractdata: function (usr, pass, key) {
-
+        var validation = validate (usr, pass), status = validation[0], content = validation[1];
     },
 
     storedata: function (usr, pass, key, val) {
-
+        var validation = validate (usr, pass), status = validation[0], content = validation[1];
     }
 }
+
 /* Validates a user and a password by reading the stored JSON buffer */
 function validate (usr, pass) {
-    var fol = './db/' + website + usr, status = 'BAD', content = '', hash;
-
-    // Allow for no password... trollface.jpg
-    if (!pass) hash = 'none';
-    else pass = salt (pass);
+    var fol = './db/' + website + '/' + usr, status = 'BAD', content = '';
 
     try {
-        content = JSON.parse ('' + fs.readFileSync (fol)), psswd = (content['password'] || 'none');
-        if (psswd === hash) status = 'OK';
+        content = JSON.parse ('' + fs.readFileSync (fol));
+        var hash = (content['hash'] || 'none'), salT = (content['salt'] || '');
+        if (sha256 (pass + salT) === hash) status = 'OK';
+
     } catch (error) {
         switch (error.code) {
             case 'ENOENT':
                 $dvnt('fol dne: ' + fol);
                 status = 'DNE';
                 break;
+
             case 'EISDIR':
                 $dvnt('fol is dir: ' + fol);
                 // There should not be directories in a folder inside a /db/[website] directory
                 fs.unlinkSync (fol);
                 status = 'DNE';
                 break;
+
             default:
                 $dnt('validate - unknown error:\n' + error, 'unknown error\'s code: ' + error.code);
                 status = 'ERR';
@@ -134,31 +160,35 @@ function open (path, mode) {
         return fs.openSync (path, mode);
     } catch (err) {
         switch (mode) {
-            case 'r':
-            case 'r+':
+            case 'r': case 'r+':
                 $dnt('path: ' + path, 'mode: ' + mode);
                 $dvnt('The path does not exist, and the mode does not create the file.');
                 break;
-            case 'ax':
-            case 'ax+':
-            case 'wx':
-            case 'wx+':
+
+            case 'ax': case 'ax+': case 'wx': case 'wx+':
                 $dnt('path: ' + path, 'mode: ' + mode);
                 $dvnt('The path exists, and the mode only works when the file does not exist.');
                 break;
+
             default:
                 $dnt('path: ' + path, 'mode: ' + mode, 'error.code: ' + error.code);
                 $dvnt('An unknown error occurred:\n' + err);
                 break;
+
         } return null;
     }
 }
 
-/* Salting function for incoming strings */
-function salt (string) {
-    var s0 = '$0VP3R', s1 = '$@1+', n = 10, hash = string + ':)';
-    for (var i = 0; i < n - 1; i++) hash += s0 + sha256 (hash + s1);
-    return sha256 (hash);
+/* Generates a pseud-random ascii string 1000 characters long with ascii codes in [32, 126] */
+function salt () {
+    var s0 = '', n = 1000, UPPER_ASCII = 126 - 32, LOWER_ASCII = 32;
+
+    for (var i = 0; i < n; i++) {
+        var ascii = Math.floor (Math.random () * UPPER_ASCII) + LOWER_ASCII;
+        s0 += String.fromCharCode (ascii);
+    }
+
+    return s0;
 }
 
 /* Hashes the input string to its standard SHA-256 represenation */

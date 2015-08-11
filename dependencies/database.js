@@ -33,7 +33,7 @@ process.on ('message', function (m) {
     }) (q.username || q.usr,
         q.password || q.pass,
         q.newpassword || q.npass || q.newusr || q.nusr || 
-            (q.datakey && q.datakey.lower ()) || (q.dkey && q.dkey.lower ()) || q,
+            (q.datakey && q.datakey.toLowerCase ()) || (q.dkey && q.dkey.toLowerCase ()) || q,
         q.datakeyval || q.dkval));
 });
 
@@ -206,7 +206,7 @@ var handlers = {
     },
 
     storealldata: function (usr, pass, obj) {
-        var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        var validation = validate (usr, pass), status = validation[0], content = validation[1], fd;
         $dvnt('storealldata called!');
         if (status === 'OK') {
             try {
@@ -218,7 +218,7 @@ var handlers = {
                     }
                 }
 
-                var fd = open ('./dependencies/db/' + website + '/' + usr + '.user', 'w'), buffer = new Buffer (JSON.stringify (content));
+                fd = open ('./dependencies/db/' + website + '/' + usr + '.user', 'w'), buffer = new Buffer (JSON.stringify (content));
                 if (fd) {
                     fs.writeSync (fd, buffer, BUFFER_POSITION, buffer.length, FILE_POSTION);
                     fs.closeSync (fd);
@@ -295,7 +295,7 @@ function open (path, mode) {
                 break;
 
             default:
-                $dnt('path: ' + path, 'mode: ' + mode, 'error.code: ' + error.code);
+                $dnt('path: ' + path, 'mode: ' + mode, 'error.code: ' + err.code);
                 $dvnt('An unknown error occurred:\n' + err);
                 break;
 

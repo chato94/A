@@ -73,7 +73,7 @@ function POSTHandler (request, response, IP) {
 
             $dnt ('thisID: ' + thisID);
             dataBases[thisID] = cp.fork (__dirname + '/dependencies/database.js', ['' + verbose, '' + debug]);
-            dataBases[thisID].send ([url, body]);
+            dataBases[thisID].send ([url, body, IP]);
 
             dataBases[thisID].on ('message', function (m) {
                 respondTo (url, response, IP, m, 200, 'text/html');

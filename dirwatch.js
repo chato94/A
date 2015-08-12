@@ -1,9 +1,11 @@
 /**
- * Polls the server directory every 'x' seconds to detect a file change independently
- * of the parent process.
+ * Polls the /static, /init/, and /404 directories every 'x' seconds to detect a file change 
+ * independently of the parent process.
  *
  * Sends a mapping of top folders to the parent process with a sorted array of all valid
- * files found in that top folder
+ * files found in that top folder. Static webpages used to be on the same level as index.js,
+ * thus explaining why the mapping is the way it is, and why it's simple to revert in case
+ * it has to be that way.
  */
 var fs = require ('fs'), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', pth = __dirname + S,
 p0 = pth + 'static', p1 = pth + 'init', p2 = pth + '404', allPaths = bfs (p0, p1, p2),
@@ -19,12 +21,18 @@ function updatePaths () {
     var d = bfs (p0, p1, p2);
 
     // Small optimization for speedup of directory equality checking
-    d.length !== allPaths.length? _true () : _false ();
-
-    function _true () {allPaths = d; p.send (concat (d));}
-    function _false () {
-    	d.sort ();
-    	for (var i = 0; i < d.length; i++) if (allPaths[i] !== d[i]) {allPaths = d; p.send (concat (d)); break;}
+    if (d.length !=== allPaths.length) {
+        allPaths = d;
+        p.send (concat (d));
+    } else {
+        d.sort ();
+        for (var i = 0; i < d.length; i++) {
+            if (allPaths[i] !== d[i]) {
+                allPaths = d;
+                p.send (concat (d));
+                break;
+            }
+        }
     }
 
     setTimeout (updatePaths, SECONDS * 1000);

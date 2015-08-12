@@ -2,19 +2,26 @@
 This is a static file server that is powered by Node.js, meaning that it serves files to any and all devices that are on the same network as the hosting machine. It functions similarly to **WAMP** in that it's as simple as dragging and dropping all necessary dependencies and it works, but it also has its potential quirks, naming restrictions, and overall, naïve approaches to web standards that have been solved by *much* smarter people than myself.
 
 ## Instructions
-Please note that these instructions assume that Node.js is already properly installed on the machine, and that you know how to run any JavaScript using command lines. If not, check out these pages for instructions for [Windows](http://blog.teamtreehouse.com/install-node-js-npm-windows), [Linux](http://blog.teamtreehouse.com/install-node-js-npm-linux), and [Mac](http://blog.teamtreehouse.com/install-node-js-npm-mac).
+Please note that these instructions assume that Node.js is already properly installed on the machine, and that you know how to run any JavaScript using command lines. If not, check out these pages for instructions for [Windows](http://blog.teamtreehouse.com/install-node-js-npm-windows), [Linux](http://blog.teamtreehouse.com/install-node-js-npm-linux), and [Mac](http://blog.teamtreehouse.com/install-node-js-npm-mac). All directories described assume that you're in the folder that contains the `index.js` file that comes with the server.
 
 ### Static File Serving Instructions
-* Add all files and directories that you want to serve into the `static` directory.
-  * Each website must have its own directory inside the `static` directory
+* Add all files and directories that you want to serve into the `/static` directory.
+  * Each website must have its own folder inside the `/static` directory
   * The server will automatically search for and serve an `index.html` file in each directory, and then it will serve the first HTML file that it finds.
     * There are **no guarantees** for the server to find one HTML file over another in any order
+* The static file server has 3 main folders, each for different website types. These are:
+  * `/static`
+  * `/init`
+    * The contents of this folder are 100% customizable, except that this directory **must** contain an `index.html` file, or it will serve the contents of `/404`
+  * `/404`
+    * The contents of this folder are also 100% customizable, except that, like `/init`, it **must** contain an `index.html` file, or it will serve the contents of `/dependencies/500.html`
+      * `/dependencies/500.html` must be present in its current location (the server will not even start without it), but it is fully customizable as well.
 * Because of the way that the server looks for files, there are naming restrictions that must be taken into account. The following is the hierarchy with which the server attempts to find a file with the URL that a user types after the IP address of the navigation bar of their browser:
-  1. Attempts to serve the path (`/something/somethingelse/index.html`) perfectly (`/static/something/somethingelse/index.html`). Any other path found in another folder with this name will never be seen. If this fails then...
-  2. Attempts to serve a dependency (CSS, JavaScript, etc.) from the last folder that contained the HTML file. Meaning that if the last successfully loaded HTML file is located at `/static/website` and the user is requesting `javascript/dependency.js`, the server searches for `/static/website/javascript/dependency.js`. If this fails then...
-  3. Attempts to serve the requested URL with `/index.html` attached to the end of it. If this fails then...
-  4. Attempts to serve the requested URL with any sort of HTML file attached to the end of it. Meaning that if the website folder in the `/static` directory contains exactly one file called `website.html`, it will serve that. If this fails then...
-  5. It servers the contents in the `/404` directory.
+  1. Attempts to match the URL after the IP address (for example, `/something/somethingelse/index.html`) perfectly with a path in one of `/static`, `/init`, or `/404` (for example, `/static/something/somethingelse/index.html`). Any other path found in another folder with this name will never be seen. If this fails then...
+  2. Attempts to serve a dependency (CSS, JavaScript, etc.) from the last folder that contained a successfully loaded HTML file. Meaning that if the last successfully loaded HTML file is located at, for example, `/static/website` and the user is requesting, for example, `/javascript/dependency.js`, the server searches for `/static/website/javascript/dependency.js`. If this fails then...
+  3. Attempts to serve the requested URL with `/index.html` attached to the end of it. For example, if the user requests `/init/this/path/to/website`, the server searches for `/init/this/path/to/website/index.html`. If this fails then...
+  4. Attempts to serve the requested URL with any sort of HTML file attached to the end of it. Meaning that if, for example, the website is the `/static/website` directory, and it contains exactly one file called `website.html`, it will serve `/static/website/website.html`. If this fails then...
+  5. It servers the HTML file and dependencies in the `/404` directory.
 * The `index.js` file has support for 2 command line arguments, each separated with a space (or more, but are still counted as one argument)
   * -v[erbose]: logs additional information about how each request is being processed to the terminal window
   * -d[ebug]: logs internal variable values for each request, along with error stacks that might mysteriously arise

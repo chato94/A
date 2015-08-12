@@ -76,7 +76,7 @@ function POSTHandler (request, response, IP) {
             dataBases[thisID].send ([url, body, IP]);
 
             dataBases[thisID].on ('message', function (m) {
-                respondTo (url, response, IP, m, 200, 'text/html');
+                respondTo (url, response, IP, m, 200, 'application/json');
                 dataBases[thisID].kill ();
                 dataBases[thisID] = null;
             });
@@ -91,7 +91,7 @@ function POSTHandler (request, response, IP) {
 /* Root function of the GET request handling function tree */
 function GETHandler (request, response, IP) {
     var ip = IP + ') ' + fN (GETHandler), wrap = d.match (request.url, IP), url = '.' + wrap[0], code = wrap[1];
-    $nt(ip + 'Detected a GET request!', ip+'Raw URL: ' + request.url, ip+'Filtered URL: ' + url);
+    $nt(ip + 'Detected a GET request!', ip+'Raw URL: ' + request.url, ip + 'Filtered URL: ' + url);
     read (url, response, IP, code);
 }
 
@@ -100,10 +100,6 @@ function read (url, response, IP, code) {
     var ip = IP + ') ' + fN (read);
     $dnt(ip + 'Attempting to read the file in: ' + url);
     fs.readFile (url, function (error, content) {
-        // Add web identification to .dbaccess forms in HTML files
-        //if (url.match (/\.html$/)) content = content.replace (/(<\s*(form|input).+(form)?action\s*?=\s*?").+(\..+\.dbaccess")/i)
-
-        // Change all XMLHttp .dbaccess requests in JavaScript files
         error? send500 (url, response, IP, error) : respondTo (url, response, IP, content, code, MIMEType (path.basename (url)));
     });
 }
@@ -118,7 +114,7 @@ function send500 (url, response, IP, error) {
 /* Handles responding to a request with the input arguments */
 function respondTo (url, response, IP, content, code, mime) {
     var ip = IP + ') ' + fN (respondTo);
-    $nt(ip + 'Finalizing the response for: ' + url, ip+'Status Code: ' + code);
+    $nt(ip + 'Finalizing the response for: ' + url, ip + 'Status Code: ' + code);
     response.writeHead (code, {'Content-Type': mime});
     response.write (content, function () {$n('*** Finished the response for ' + IP + ' ***'); response.end ();});
 }

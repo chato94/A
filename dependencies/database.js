@@ -25,14 +25,14 @@ process.on ('message', function (m) {
 
     // All responses are strings in JSON notation. Labels are "label" and queried content will be "content"
     process.send ((handlers[command] || function (usr, pass, arg2, arg3) {
-        $nt(IP +'The command given to this database.js instance does not match any implemented command');
+        $nt(IP + ') The command given to this database.js instance does not match any implemented command');
         $dnt('command: ' + command, 'usr: ' + usr, 'pass: ' + pass, 'arg2: ' + arg2, 'arg3: ' + arg3);
 
         // Send the CDNE label because the command does not match any of the 8 pre-defined properties of handlers
         return '{"label": "CDNE"}';
-    }) (q.username || q.usr,
+    }) (clean (q.username) || clean (q.usr),
         q.password || q.pass,
-        q.newpassword || q.npass || q.newusr || q.nusr || 
+        q.newpassword || q.npass || clean (q.newusr) || clean (q.nusr) || 
             (q.datakey && q.datakey.toLowerCase ()) || (q.dkey && q.dkey.toLowerCase ()) || q,
         q.datakeyval || q.dkval));
 });
@@ -87,13 +87,13 @@ var handlers = {
 
         // The user does not exist in the website's directory in /dependencies/db, so create the account    
         } catch (error) {
-            $nt(IP +'There was an error in the try section of create user')
+            $nt(IP + ') There was an error in the try section of create user')
             $dnt('error.code: ' + error.code);
             switch (error.code) {
                 // The website folder does not exist in the directory
                 case 'ENOENT':
                     try {
-                        $nt(IP +'Creating the directory "' + fol + '" for the database');
+                        $nt(IP + ') Creating the directory "' + fol + '" for the database');
                         fs.mkdirSync (fol);
                     } catch (err) {
                         $dnt('Error using fs.mkdirSync(' + fol + ')', 'err.code: ' + err.code, 'err:\n' + err + '\n');
@@ -118,11 +118,11 @@ var handlers = {
         $dvnt('deleteuser called!');
         if (status === 'OK') {
             try {
-                $nt(IP +'Deleting user "' + usr + '" from the ' + website + ' database.');
+                $nt(IP + ') Deleting user "' + usr + '" from the ' + website + ' database.');
                 fs.unlinkSync ('./dependencies/db/' + website + '/' + usr + '.user');
                 return '{"label": "OK"}';
             } catch (err) {
-                $nt(IP +'There was an unknown error deleting the approved user');
+                $nt(IP +') There was an unknown error deleting the approved user');
                 $dnt('handlers[deleteuser]::', 'usr: ' + usr, 'err.code: ' + err.code);
                 $dvnt('err:\n' + err + '\n');
                 return '{"label": "ERR"}';
@@ -135,11 +135,11 @@ var handlers = {
         $dvnt('changename called!');
         if (status === 'OK') {
             try {
-                $nt(IP +IP + ') Re-naming user "' + usr + '" to "' + nName + '"');
+                $nt(IP + ') Re-naming user "' + usr + '" to "' + nName + '"');
                 fs.renameSync ('./dependencies/db/' + website + '/' + usr + '.user', './dependencies/db/' + website + '/' + nName + '.user');
                 return '{"label": "OK"}';
             } catch (err) {
-                $nt(IP +IP + ') There was an error (most likely a data race renaming a user file');
+                $nt(IP + ') There was an error (most likely a data race renaming a user file');
                 $dnt('handlers.changename::', 'usr: ' + usr, 'nName: ' + nName, 'err.code: ' + err.code);
                 $dvnt('error:\n' + err + '\n');
                 return '{"label": "ERR"}';
@@ -148,11 +148,11 @@ var handlers = {
     },
 
     changepassword: function (usr, pass, nPass) {
-        var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        var validation = validate (usr, pass), status = validation[0], content = validation[1], fd;
         $dvnt('changepassword called!');
         if (status === 'OK') {
             try {
-                var fd = open ('./dependencies/db/' + website + '/' + usr + '.user', 'w');
+                fd = open ('./dependencies/db/' + website + '/' + usr + '.user', 'w');
                 if (fd) {
                     var slt = salt (), hash = sha256 (nPass + slt);
                     content['hash'] = hash;
@@ -164,10 +164,10 @@ var handlers = {
                     return '{"label": "OK"}';
                 }
 
-                $nt(IP +'There was an error using the file descriptor in changepassword');
+                $nt(IP + ') There was an error using the file descriptor in changepassword');
                 $dnt('usr: ' + usr, 'fd: ' + fd);
             } catch (err) {
-                $nt(IP +IP +'There was an error using fs.writeSync in changepassword');
+                $nt(IP + ') There was an error using fs.writeSync in changepassword');
                 $dnt('usr: ' + usr, 'err.code: ' + err.code);
                 $dvnt('err:\n' + err + '\n');
             }
@@ -202,17 +202,21 @@ var handlers = {
         $dvnt('extractdata called!');
 
         // Take advantage of extractalldata as it is the same function, but with one key
-        return '{' + key + ': ' + (JSON.parse (handlers.extractalldata (usr, pass)).content[key] || '""') + '}';
+        var result = JSON.parse (handlers['extractalldata'] (usr, pass)), c = result['content'][key], status = result['label'];
+
+        if (status === 'OK') return '{"label": "OK", "content": {"' + key + '": "' + (c? c : '') + '"}}';
+        return '{"label": "' + status + '": "content": {}}';
     },
 
     storealldata: function (usr, pass, obj) {
-        var validation = validate (usr, pass), status = validation[0], content = validation[1], fd;
         $dvnt('storealldata called!');
+        var validation = validate (usr, pass), status = validation[0], content = validation[1], 
+            fd, BUFFER_POSITION = 0, FILE_POSTION = null;
         if (status === 'OK') {
             try {
                 $nt(IP + ') Storing/changing multiple data entries for user "' + usr + '"');
                 for (var i in obj) {
-                    var prop = i.lower ();
+                    var prop = i.toLowerCase ();
                     if (obj.hasOwnProperty (prop) && prop !== 'hash' && prop !== 'salt') {
                         content[prop] = obj[prop];
                     }
@@ -227,7 +231,7 @@ var handlers = {
             } catch (err) {
                 $nt(IP + ') There was an error using open, fs.writeSync, or fs.closeSync');
                 $dnt('usr: ' + usr, 'fd: ' + fd, 'err.code: ' + err.code);
-                $dvnt('error:\n' + err + '\n');
+                $dvnt('err: ' + err.stack + '\n');
             }
 
             // The password was verified, but there was an error using fs.open, write, or close
@@ -242,7 +246,9 @@ var handlers = {
         $dvnt('storedata called!');
 
         // Take advantage of storealldata as it does the same function, but with one key-val pair
-        return handlers['storealldata'] (usr, pass, {key: val});
+        var map = {};
+        map[key] = val;
+        return handlers['storealldata'] (usr, pass, map);
     }
 }
 
@@ -270,7 +276,7 @@ function validate (usr, pass) {
                 break;
 
             default:
-                $dnt('validate - unknown error:\n' + error, 'unknown error\'s code: ' + error.code);
+                $dnt('validate - unknown error: ' + error.stack, 'unknown error\'s code: ' + error.code);
                 status = 'ERR';
                 break;
         }
@@ -295,13 +301,14 @@ function open (path, mode) {
                 break;
 
             default:
+                $nt(IP + ') There was an error using the open function');
                 $dnt('path: ' + path, 'mode: ' + mode, 'error.code: ' + err.code);
-                $dvnt('An unknown error occurred:\n' + err);
+                $dvnt('err: ' + err.stack);
                 break;
 
         } 
 
-        $nt(IP +'Returning a null from the open module');
+        $nt(IP + ') Returning a null from the open function');
         $dnt('path: ' + path, 'mode: ' + mode);
         return null;
     }
@@ -325,6 +332,11 @@ function salt () {
 function sha256 (string) {
     /* Necessary Constants */
     return require ('crypto').createHash ('sha256').update (string, 'utf8').digest ('hex');
+}
+
+/* Only allow A-Z, a-z, 0-9, _, and - in storing user names */
+function clean (fileName) {
+    return fileName.replace (/[^A-Z0-9_\-]/gi, '');
 }
 
 /* console.log alias function */

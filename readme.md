@@ -2,7 +2,7 @@
 This is a static file server that is powered by Node.js, meaning that it serves files to any and all devices that are on the same network as the hosting machine. It functions similarly to WAMP in that it's as simple as dragging and dropping all necessary dependencies and it works, but it also has its potential quirks and naming restrictions. This is an adequate solution for users looking for a simple way to serve files on their local network and not just their machine.
 
 ## Instructions
-Please note that these instructions assume that Node.js is already properly installed on the machine, and that users know how to run any JavaScript using command lines. If not, these pages give detailed instructions for [Windows](http://blog.teamtreehouse.com/install-node-js-npm-windows), [Linux](http://blog.teamtreehouse.com/install-node-js-npm-linux), and [Mac](http://blog.teamtreehouse.com/install-node-js-npm-mac). All directories described assume that the user is in the folder that contains the `index.js` file that comes with the server. Note that Windows uses `\` instead of `/` to separate directories.
+Please note that these instructions assume that Node.js is already properly installed on the machine, and that users know how to run JavaScript files from the terminal using command lines. If not, these pages give detailed instructions for [Windows](http://blog.teamtreehouse.com/install-node-js-npm-windows), [Linux](http://blog.teamtreehouse.com/install-node-js-npm-linux), and [Mac](http://blog.teamtreehouse.com/install-node-js-npm-mac). All directories described in the following instructions assume that the user is in the folder that contains the `index.js` file that comes with the server. Note that Windows uses `\` instead of `/` to separate directories.
 
 ### Static File Serving Instructions
 * Add all files and directories to serve as-is into the `/static` directory.
@@ -16,12 +16,14 @@ Please note that these instructions assume that Node.js is already properly inst
 
   * `/init`
     * Contains the homepage of the static file server (when the URL is `/`).
-    * The contents of this folder are 100% customizable, except that this directory **must** contain an `index.html` file, or it will serve the contents of the `/404` directory.
+    * The contents of this folder are 100% editable, except that this directory **must** contain an `index.html` file, or it will serve the contents of the `/404` directory.
 
   * `/404`
     * Contains the 404 error page for when users request a page that does not exist
-    * The contents of this folder are also 100% customizable, except that, like `/init`, it **must** contain an `index.html` file, or it will serve the contents of `/dependencies/500.html`
-      * `/dependencies/500.html` must be present in its current location (the server will not even start without it), but it is fully customizable as well.
+    * The contents of this folder are also 100% editable, except that, like `/init`, it **must** contain an `index.html` file, or it will serve the contents of `/dependencies/500.html`
+      * `/dependencies/500.html` must be present in its current location (the server will not even start without it), but it is fully editable as well.
+
+  * None of these directories, and the `dependencies` directory, should be removed at any point as the server assumes that they always exist
 
 * Because of the way that the server searches for files, there are potential naming restrictions that must be taken into account. The following is the hierarchy with which the server attempts to find a file with the URL that a user types after the IP address of the navigation bar of their browser. Use it to avoid any potential conflicts (none have been found to this date, but unit testing has not been conducted in this area):
   1. The server first attempts to perfectly match the URL after the IP address with a path in one of `/static`, `/init`, or `/404` directories. For example, the server would attempt to find `http://192.168.1.11/something/somethingelse/file.extension` exactly at `/static/something/somethingelse/file.extension`. If this fails then...
@@ -30,7 +32,7 @@ Please note that these instructions assume that Node.js is already properly inst
 
   3. Attempts to serve the requested URL with `/index.html` attached to the end of it. For example, if the user requests `/init/this/path/to/website`, the server searches for `/init/this/path/to/website/index.html`. If this fails then...
 
-  4. Attempts to serve the requested URL with any sort of HTML file attached to the end of it. Meaning that if, for example, the website is the `/static/website` directory, and it contains exactly one file called `website.html`, it will serve `/static/website/website.html`. If this fails then...
+  4. Attempts to serve the requested URL with any sort of HTML file attached to the end of it. Meaning that if, for example, the website is in the `/static/website` directory, and it contains exactly one file called `website.html`, it will serve `/static/website/website.html`. If this fails then...
 
   5. It servers the HTML file and dependencies in the `/404` directory.
 
@@ -50,6 +52,8 @@ For users that know about POST requests via the `form` HTML tag (or `AJAX`), the
   
     * This part of the URL (**and usernames**) are stripped of all characters that are not **A-Z**, **a-z**, **0-9**, **underscores**, or **hyphens** (in regex, `/^A-Z0-9_\-/gi`), before they are stored on the server
       * For example, `#WEBSI!TE` and `@WEB&SIT^E` will both be treated internally as `WEBSITE`, thus create unexpected errors if applications rely on the differences.
+
+    * These directories are created on the fly if they do not exist. There is currently no captcha system in place to prevent anybody from just creating an account if they have access to making custom POST requests, nor there is crrently code preventing a developer from one static website identifying his or her website as another.
 
   * `COMMAND` is one of 8 commands that can be called for data manipulation. All `dbaccess` POST commands (except for the extraction commands) will return a `JSON` formatted string with one value called `"label"`, which will determine if the command went through as expected. The following are all valid commands, all of which are case-insentitive (usernames are stripped of all characters like `WEBSITE`):
     * `createuser`
@@ -79,7 +83,7 @@ For users that know about POST requests via the `form` HTML tag (or `AJAX`), the
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password to access the content of the user account
       * Returns a `JSON` string with the usual `"label"` key for the status, but also a `"content"` key for the content extracted in the form of another `JSON` object string
-        * ex.) `{"label": "OK", "content": {"key0": "val0", "key1": "val1", ...}}`
+        * For example, `{"label": "OK", "content": {"key0": "val0", "key1": "val1", ...}}`
 
     * `extractdata`
       * Required Query String Keys:

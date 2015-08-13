@@ -21,7 +21,7 @@ function updatePaths () {
     var d = bfs (p0, p1, p2);
 
     // Small optimization for speedup of directory equality checking
-    if (d.length !=== allPaths.length) {
+    if (d.length !== allPaths.length) {
         allPaths = d;
         p.send (concat (d));
     } else {

@@ -12,8 +12,10 @@ Please note that these instructions assume that Node.js is already properly inst
 
 * The static file server has 3 main folders, each for different website types. These are:
   * `/static`
+
   * `/init`
     * The contents of this folder are 100% customizable, except that this directory **must** contain an `index.html` file, or it will serve the contents of `/404`
+
   * `/404`
     * The contents of this folder are also 100% customizable, except that, like `/init`, it **must** contain an `index.html` file, or it will serve the contents of `/dependencies/500.html`
       * `/dependencies/500.html` must be present in its current location (the server will not even start without it), but it is fully customizable as well.
@@ -30,8 +32,10 @@ Please note that these instructions assume that Node.js is already properly inst
   5. It servers the HTML file and dependencies in the `/404` directory.
 
 * The `index.js` file has support for 2 command line arguments, each separated with a space (or more, but are still counted as one argument)
-  * -v[erbose]: logs additional information about how each request is being processed to the terminal window
-  * -d[ebug]: logs internal variable values for each request, along with error stacks that might mysteriously arise
+  * `-v[erbose]`: logs additional information about how each request is being processed to the terminal window
+
+  * `-d[ebug]`: logs internal variable values for each request, along with error stacks that might mysteriously arise
+
   * None of the mentioned arguments can currently be changed during run time, only during initialization
 
 ### User Database Documentation
@@ -39,41 +43,50 @@ For more advanced users that didn't need the explanations above and know about P
 * All database calls must be done using POST, must conform to the [standard query string](https://en.wikipedia.org/wiki/Query_string), and they must have the request URL in the format `WEBSITE`.`COMMAND`.`dbaccess`
   * `WEBSITE` is the directory that will hold the users for `WEBSITE`
     * This part of the URL (and usernames) are stripped of all characters that are not **A-Z**, **a-z**, **0-9**, **underscores**, or **hyphens**, before they are stored on the server
-      * ex.) #WEBSI!TE and @WEB&SIT^E will both be treated the same.
+      * ex.) `#WEBSI!TE` and `@WEB&SIT^E` will both be treated the same.
+
     * ex.) Google.COMMAND.dbaccess -> will create and store users in `/dependencies/db/Google/...`
+  
   * `COMMAND` is one of 8 commands that can be called for data manipulation. The following are all valid commands, all of which are case-insentitive:
     * `createuser`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password to access the content of the user account
+
     * `deleteuser`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password to verify owner and delete the account
+
     * `changename`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password modify the account name
         * `newusername` or `newusr` or `nusr` = the new name of the account
+
     * `changepassword`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password to access the content of the user account
         * `newpassword` or `npass` = new password to verify the account
+
     * `extractalldata`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password to access the content of the user account
+
     * `extractdata`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password to access the content of the user account
         * `datakey` or `dkey` = key of the value to pull from the account (case insensitive)
+
     * `storealldata`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password to access the content of the user account
         * Any number of key-value query string keys. All will be stored to the account. Keys are always case insensitive
+
     * `storedata`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
@@ -81,9 +94,10 @@ For more advanced users that didn't need the explanations above and know about P
         * `datakey` or `dkey` = key of the value to store in the account (case insensitive)
         * `datakeyval` or `dkval` = value to store with `datakey` (or `dkey`)
   * `dbaccess` identifies the URL as a database command. More dynamic POST methods may or may not be coming soon
+  
   * All `dbaccess` POST requests will return a JSON formatted string with one value called `label`, which will determine if the command went through as expected. There are 5 labels to keep track of
     * `OK`   - The command functioned as expected
-    * `BAD`  - The command failed because the username and/or password is bad, or requested the `hash`/or `salt` values
+    * `BAD`  - The command failed because the username and/or password is bad, or requested the `hash` or `salt` values
     * `AE`   - The account creation failed because the new username already exists
     * `ERR`  - The server had an unexpected error
     * `CDNE` - The command does not exist in the current configuration of `database.js`

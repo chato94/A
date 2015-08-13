@@ -17,8 +17,8 @@ var qs = require ('querystring'), fs = require ('fs'), website, IP,
  *     CDNE - The command does not exist in the current configuration of database.js
  */
 process.on ('message', function (m) {
-    var specs = m[0].match (/[^.]+/g), q = qs.parse (m[1]), command = specs[1];
-    website = specs[0];
+    var specs = m[0].match (/[^.]+/g), q = qs.parse (m[1]), command = specs[1].toLowerCase ();
+    website = clean (specs[0]);
     IP = m[2];
 
     $dvnt(IP + ') child database.js process received a message from parent!');
@@ -32,7 +32,7 @@ process.on ('message', function (m) {
         return '{"label": "CDNE"}';
     }) (clean (q.username) || clean (q.usr),
         q.password || q.pass,
-        q.newpassword || q.npass || clean (q.newusr) || clean (q.nusr) || 
+        q.newpassword || q.npass || clean (q.newusername) || clean (q.newusr) || clean (q.nusr) || 
             (q.datakey && q.datakey.toLowerCase ()) || (q.dkey && q.dkey.toLowerCase ()) || q,
         q.datakeyval || q.dkval));
 });
@@ -329,14 +329,12 @@ function salt () {
 }
 
 /* Hashes the input string to its standard SHA-256 represenation */
-function sha256 (string) {
-    /* Necessary Constants */
-    return require ('crypto').createHash ('sha256').update (string, 'utf8').digest ('hex');
-}
+function sha256 (string) {return require ('crypto').createHash ('sha256').update (string, 'utf8').digest ('hex');}
 
 /* Only allow A-Z, a-z, 0-9, _, and - in storing user names */
 function clean (fileName) {
-    return fileName.replace (/[^A-Z0-9_\-]/gi, '');
+    if (fileName) return fileName.replace (/[^A-Z0-9_\-]/gi, '');
+    return fileName;
 }
 
 /* console.log alias function */

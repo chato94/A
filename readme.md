@@ -25,7 +25,7 @@ Please note that these instructions assume that Node.js is already properly inst
 
   * None of these directories, and the `dependencies` directory, should be removed at any point as the server assumes that they always exist
 
-* Because of the way that the server searches for files, there are potential naming restrictions that must be taken into account. The following is the hierarchy with which the server attempts to find a file with the URL that a user types after the IP address of the navigation bar of their browser. Use it to avoid any potential conflicts (none have been found to this date, but unit testing has not been conducted in this area):
+* Because of the way that the server searches for files, there are potential naming restrictions that must be taken into account. **Even though file storage might not be case sensitive for Windows, the URLs are case sensitive, and must be typed exactly as they are spelled (capitalization and all) in the hard drive.** The following is the hierarchy with which the server attempts to find a file with the URL that a user types after the IP address of the navigation bar of their browser. Use it to avoid any potential conflicts (none have been found to this date, but unit testing has not been conducted in this area):
   1. The server first attempts to perfectly match the URL after the IP address with a path in one of `/static`, `/init`, or `/404` directories. For example, the server would attempt to find `http://192.168.1.11/something/somethingelse/file.extension` exactly at `/static/something/somethingelse/file.extension`. If this fails then...
 
   2. Attempts to serve a dependency (CSS, JavaScript, etc.) from the last folder that contained a successfully loaded HTML file. For example, this means that if the last successfully loaded HTML file for a user is located at `/static/website` and the user is requesting `/javascript/dependency.js`, the server would search for `/static/website/javascript/dependency.js`. If this fails then...
@@ -36,6 +36,8 @@ Please note that these instructions assume that Node.js is already properly inst
 
   5. It servers the HTML file and dependencies in the `/404` directory.
 
+  * If a website folder does not have an HTML file, the server serves the contents in the `/404` directory.
+
 * The `index.js` file has support for 2 command line arguments, each separated with a space (or more, but are still counted as one argument)
   * `-v[erbose]`: logs additional information about how each request is being processed to the terminal window
 
@@ -45,7 +47,7 @@ Please note that these instructions assume that Node.js is already properly inst
 
 ### User Database Documentation
 For users that know about POST requests via the `form` HTML tag (or `AJAX`), the server also has basic capabilities to create user accounts for websites.
-* All database calls must be done using POST, must conform to the [standard query string](https://en.wikipedia.org/wiki/Query_string), and must have the request URL in the format `WEBSITE`.`COMMAND`.`dbaccess`
+* All database calls must be done using POST, must conform to the [standard query string](https://en.wikipedia.org/wiki/Query_string) (5MB limit), and must have the request URL in the format `WEBSITE`.`COMMAND`.`dbaccess`
   * `WEBSITE` is the directory that will hold the users for `WEBSITE`
 
     * For example, `Google.COMMAND.dbaccess` will run `COMMAND` for users in `/dependencies/db/Google/...`

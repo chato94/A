@@ -56,12 +56,12 @@ function fHTTP (rq, rs) {
 /* Root function of the POST request handling function tree */
 function POSTHandler (request, response, IP) {
     // http://stackoverflow.com/questions/4295782/how-do-you-extract-post-data-in-node-js
-    var url = decodeURL (request.url).replace (/^\//, ''), body = '', ONE_MB = 1048576;
+    var url = decodeURL (request.url).replace (/^\//, ''), body = '', FIVE_MB = 5242880;
 
     // Parses the incoming data to the body variable
     request.on ('data', function (data) {
         body += data;
-        if (body.length > ONE_MB) request.connection.destroy ();
+        if (body.length > FIVE_MB) request.connection.destroy ();
     });
 
     // Processes the parsed body query string

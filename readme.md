@@ -42,12 +42,13 @@ Please note that these instructions assume that Node.js is already properly inst
 For more advanced users that didn't need the explanations above and know about POST requests via the `form` HTML tag (or `AJAX`), the server also has very basic capabilities to create user accounts for your website.
 * All database calls must be done using POST, must conform to the [standard query string](https://en.wikipedia.org/wiki/Query_string), and they must have the request URL in the format `WEBSITE`.`COMMAND`.`dbaccess`
   * `WEBSITE` is the directory that will hold the users for `WEBSITE`
-    * This part of the URL (and usernames) are stripped of all characters that are not **A-Z**, **a-z**, **0-9**, **underscores**, or **hyphens**, before they are stored on the server
-      * ex.) `#WEBSI!TE` and `@WEB&SIT^E` will both be treated the same.
 
-    * ex.) Google.COMMAND.dbaccess -> will create and store users in `/dependencies/db/Google/...`
+    * ex.) `Google.COMMAND.dbaccess` -> will run `COMMAND` for users in `/dependencies/db/Google/...`
   
-  * `COMMAND` is one of 8 commands that can be called for data manipulation. The following are all valid commands, all of which are case-insentitive:
+    * This part of the URL (**and usernames**) are stripped of all characters that are not **A-Z**, **a-z**, **0-9**, **underscores**, or **hyphens** (in regex, `/^A-Z0-9_\-/gi`), before they are stored on the server
+      * ex.) `#WEBSI!TE` and `@WEB&SIT^E` will both be treated as `WEBSITE`.
+
+  * `COMMAND` is one of 8 commands that can be called for data manipulation. The following are all valid commands, all of which are case-insentitive (usernames are stripped of all characters like `WEBSITE`):
     * `createuser`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
@@ -94,10 +95,11 @@ For more advanced users that didn't need the explanations above and know about P
         * `datakey` or `dkey` = key of the value to store in the account (case insensitive)
         * `datakeyval` or `dkval` = value to store with `datakey` (or `dkey`)
   * `dbaccess` identifies the URL as a database command. More dynamic POST methods may or may not be coming soon
-  
+
   * All `dbaccess` POST requests will return a JSON formatted string with one value called `label`, which will determine if the command went through as expected. There are 5 labels to keep track of
     * `OK`   - The command functioned as expected
-    * `BAD`  - The command failed because the username and/or password is bad, or requested the `hash` or `salt` values
+    * `BAD`  - The command failed because the password is bad, or requested the `hash` or `salt` values
+    * `DNE`  - The command failed because the account does not exist
     * `AE`   - The account creation failed because the new username already exists
     * `ERR`  - The server had an unexpected error
     * `CDNE` - The command does not exist in the current configuration of `database.js`

@@ -10,20 +10,23 @@ Please note that these instructions assume that Node.js is already properly inst
   * The server will automatically search for and serve an `index.html` file in each directory, and then it will serve the first HTML file that it finds.
     * There are **no guarantees** for the server to find one HTML file over another in any order
 
-* The static file server has 3 main folders, each for different website types. These are:
+* Users of the static file server must interact with 3 main folders, each for different website types. These are:
   * `/static`
+    * Contains all static directories and files
 
   * `/init`
-    * The contents of this folder are 100% customizable, except that this directory **must** contain an `index.html` file, or it will serve the contents of `/404`
+    * Contains the homepage of the static file server (when the URL is `/`).
+    * The contents of this folder are 100% customizable, except that this directory **must** contain an `index.html` file, or it will serve the contents of the `/404` directory.
 
   * `/404`
+    * Contains the 404 error page for when users request a page that does not exist
     * The contents of this folder are also 100% customizable, except that, like `/init`, it **must** contain an `index.html` file, or it will serve the contents of `/dependencies/500.html`
       * `/dependencies/500.html` must be present in its current location (the server will not even start without it), but it is fully customizable as well.
 
-* Because of the way that the server looks for files, there are naming restrictions that must be taken into account. The following is the hierarchy with which the server attempts to find a file with the URL that a user types after the IP address of the navigation bar of their browser:
-  1. Attempts to perfectly match the URL after the IP address (for example, `/something/somethingelse/index.html`) with a path in one of `/static`, `/init`, or `/404` (for example, `/static/something/somethingelse/index.html`). Any other path found in another folder with this name will never be seen. If this fails then...
+* Because of the way that the server searches for files, there are potential naming restrictions that must be taken into account. The following is the hierarchy with which the server attempts to find a file with the URL that a user types after the IP address of the navigation bar of their browser. Use it to avoid any potential conflicts (none have been found to this date, but unit testing has not been conducted in this area):
+  1. Attempts to perfectly match the URL after the IP address with a path in one of `/static`, `/init`, or `/404` directories. For example, the server would attempt to find `http://192.168.1.11/something/somethingelse/file.extension` exactly at `/static/something/somethingelse/file.extension`. If this fails then...
 
-  2. Attempts to serve a dependency (CSS, JavaScript, etc.) from the last folder that contained a successfully loaded HTML file. Meaning that if the last successfully loaded HTML file is located at, for example, `/static/website` and the user is requesting, for example, `/javascript/dependency.js`, the server searches for `/static/website/javascript/dependency.js`. If this fails then...
+  2. Attempts to serve a dependency (CSS, JavaScript, etc.) from the last folder that contained a successfully loaded HTML file. For example, this means that if the last successfully loaded HTML file for a user is located at `/static/website` and the user is requesting `/javascript/dependency.js`, the server would search for `/static/website/javascript/dependency.js`. If this fails then...
 
   3. Attempts to serve the requested URL with `/index.html` attached to the end of it. For example, if the user requests `/init/this/path/to/website`, the server searches for `/init/this/path/to/website/index.html`. If this fails then...
 
@@ -43,7 +46,7 @@ For more advanced users that didn't need the explanations above and know about P
 * All database calls must be done using POST, must conform to the [standard query string](https://en.wikipedia.org/wiki/Query_string), and they must have the request URL in the format `WEBSITE`.`COMMAND`.`dbaccess`
   * `WEBSITE` is the directory that will hold the users for `WEBSITE`
 
-    * ex.) `Google.COMMAND.dbaccess` -> will run `COMMAND` for users in `/dependencies/db/Google/...`
+    * ex.) `Google.COMMAND.dbaccess` will run `COMMAND` for users in `/dependencies/db/Google/...`
   
     * This part of the URL (**and usernames**) are stripped of all characters that are not **A-Z**, **a-z**, **0-9**, **underscores**, or **hyphens** (in regex, `/^A-Z0-9_\-/gi`), before they are stored on the server
       * ex.) `#WEBSI!TE` and `@WEB&SIT^E` will both be treated as `WEBSITE`.
@@ -75,12 +78,15 @@ For more advanced users that didn't need the explanations above and know about P
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password to access the content of the user account
+      * Returns a `JSON` string with the usual `"label"` key for the status, but also a `"content"` key for the content extracted in the form of another `JSON` object string
+        * ex.) `{"label": "OK", "content": {"key0": "val0", "key1": "val1", ...}}`
 
     * `extractdata`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password to access the content of the user account
         * `datakey` or `dkey` = key of the value to pull from the account (case insensitive)
+      * Returns a `JSON` string in the same format as `extractalldata`, except the `"content"` key will only have the `datakey` (or `dkey`) key-value pair
 
     * `storealldata`
       * Required Query String Keys:
@@ -98,7 +104,7 @@ For more advanced users that didn't need the explanations above and know about P
 
   * `dbaccess` identifies the URL as a database command. More dynamic POST methods may or may not be coming soon
 
-  * All `dbaccess` POST requests will return a JSON formatted string with one value called `label`, which will determine if the command went through as expected. There are 5 labels to keep track of
+  * All `dbaccess` POST commands (except for the extraction commands) will return a `JSON` formatted string with one value called `label`, which will determine if the command went through as expected. There are 5 labels to keep track of
     * `OK`   - The command functioned as expected
     * `BAD`  - The command failed because the password is bad, or requested the `hash` or `salt` values
     * `DNE`  - The command failed because the account does not exist

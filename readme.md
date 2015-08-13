@@ -24,7 +24,7 @@ Please note that these instructions assume that Node.js is already properly inst
       * `/dependencies/500.html` must be present in its current location (the server will not even start without it), but it is fully customizable as well.
 
 * Because of the way that the server searches for files, there are potential naming restrictions that must be taken into account. The following is the hierarchy with which the server attempts to find a file with the URL that a user types after the IP address of the navigation bar of their browser. Use it to avoid any potential conflicts (none have been found to this date, but unit testing has not been conducted in this area):
-  1. Attempts to perfectly match the URL after the IP address with a path in one of `/static`, `/init`, or `/404` directories. For example, the server would attempt to find `http://192.168.1.11/something/somethingelse/file.extension` exactly at `/static/something/somethingelse/file.extension`. If this fails then...
+  1. The server first attempts to perfectly match the URL after the IP address with a path in one of `/static`, `/init`, or `/404` directories. For example, the server would attempt to find `http://192.168.1.11/something/somethingelse/file.extension` exactly at `/static/something/somethingelse/file.extension`. If this fails then...
 
   2. Attempts to serve a dependency (CSS, JavaScript, etc.) from the last folder that contained a successfully loaded HTML file. For example, this means that if the last successfully loaded HTML file for a user is located at `/static/website` and the user is requesting `/javascript/dependency.js`, the server would search for `/static/website/javascript/dependency.js`. If this fails then...
 
@@ -42,16 +42,16 @@ Please note that these instructions assume that Node.js is already properly inst
   * None of the mentioned arguments can currently be changed during run time, only during initialization
 
 ### User Database Documentation
-For more advanced users that didn't need the explanations above and know about POST requests via the `form` HTML tag (or `AJAX`), the server also has very basic capabilities to create user accounts for websites.
-* All database calls must be done using POST, must conform to the [standard query string](https://en.wikipedia.org/wiki/Query_string), and they must have the request URL in the format `WEBSITE`.`COMMAND`.`dbaccess`
+For users that know about POST requests via the `form` HTML tag (or `AJAX`), the server also has basic capabilities to create user accounts for websites.
+* All database calls must be done using POST, must conform to the [standard query string](https://en.wikipedia.org/wiki/Query_string), and must have the request URL in the format `WEBSITE`.`COMMAND`.`dbaccess`
   * `WEBSITE` is the directory that will hold the users for `WEBSITE`
 
-    * ex.) `Google.COMMAND.dbaccess` will run `COMMAND` for users in `/dependencies/db/Google/...`
+    * For example, `Google.COMMAND.dbaccess` will run `COMMAND` for users in `/dependencies/db/Google/...`
   
     * This part of the URL (**and usernames**) are stripped of all characters that are not **A-Z**, **a-z**, **0-9**, **underscores**, or **hyphens** (in regex, `/^A-Z0-9_\-/gi`), before they are stored on the server
-      * ex.) `#WEBSI!TE` and `@WEB&SIT^E` will both be treated as `WEBSITE`.
+      * For example, `#WEBSI!TE` and `@WEB&SIT^E` will both be treated internally as `WEBSITE`, thus create unexpected errors if applications rely on the differences.
 
-  * `COMMAND` is one of 8 commands that can be called for data manipulation. The following are all valid commands, all of which are case-insentitive (usernames are stripped of all characters like `WEBSITE`):
+  * `COMMAND` is one of 8 commands that can be called for data manipulation. All `dbaccess` POST commands (except for the extraction commands) will return a `JSON` formatted string with one value called `"label"`, which will determine if the command went through as expected. The following are all valid commands, all of which are case-insentitive (usernames are stripped of all characters like `WEBSITE`):
     * `createuser`
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
@@ -104,7 +104,7 @@ For more advanced users that didn't need the explanations above and know about P
 
   * `dbaccess` identifies the URL as a database command. More dynamic POST methods may or may not be coming soon
 
-  * All `dbaccess` POST commands (except for the extraction commands) will return a `JSON` formatted string with one value called `label`, which will determine if the command went through as expected. There are 5 labels to keep track of
+  * There are 6 `"label"` values to potentially keep track of in the returned `JSON` string:
     * `OK`   - The command functioned as expected
     * `BAD`  - The command failed because the password is bad, or requested the `hash` or `salt` values
     * `DNE`  - The command failed because the account does not exist
@@ -113,7 +113,7 @@ For more advanced users that didn't need the explanations above and know about P
     * `CDNE` - The command does not exist in the current configuration of `database.js`
 
 ## Future Development
-Once user database support runs reliably and data-race free, there may not be any more future development for this project, except for potentially figuring out a way to add dynamic page support. There exist many other libraries that ease this process, mainly `Express`, but should support for dynamic page generation be included, it would most likely not use `Express` or any other large libraries like that because of potential unnecessary source overhead and weeks of documentation-reading to save minutes worth of work. Most likely though, this project will be wrapped in an executable file for the sake of simplicity on the user end.
+Once user database support runs reliably and data-race free, and once there exists a way to wrap the server in an executable file, there may not be any more future development for this project, except for potentially figuring out a way to add dynamic page support. There exist many other libraries that ease this process, mainly `Express`, but should support for dynamic page generation be included, it would most likely not use `Express` or any other large libraries like that because of potential unnecessary source overhead and weeks of documentation-reading to save minutes worth of work.
 
 ## Project History and Past Development
 For those interested in how this project came about, it started with the need to test a website on iOS devices. Searching for "how to make an intranet" brings up a bunch of useless jargon, except for maybe WAMP and WAMP equivalents, but the problem is that they don't have easy ways to go from `localhost` to being broadcast on the router for multiple devices to see. Thus came *A Server 2.0*, the first successful iteration of the *A Server* project that actually ran on Wi-Fi (*A Server 1.0* was an unsuccessful hodgepodge of libraries and Stack Overflow code). There was another iteration of the *A Server* project called *A Server 3.0*, which was basically a shorter, re-factored version of *A Server 2.0*, but both 2.0 and 3.0 were based on intense processing of the incoming URL to figure out what to read from the hard drive. It operated on a similar hierarchy, meaning that the exact path was checked first, then merged with the previous served HTML file, etc., but it turned out that it would be much easier, effective, and efficient to just have a list of all valid paths at any given time paired with logarithmic binary search for speed, and thus began the complete re-write of the server.

@@ -11,7 +11,8 @@ var qs = require ('querystring'), fs = require ('fs'), website, IP,
 /**
  * All valid response labels:
  *     OK   - The command functioned as expected
- *     BAD  - The command failed because the username and/or password is bad, or requested hash/salt
+ *     BAD  - The command failed because the password is bad, or requested hash/salt
+ *     DNE  - The command failed because the account does not exist
  *     AE   - The account creation failed because the new username already exists
  *     ERR  - The server had an unexpected error
  *     CDNE - The command does not exist in the current configuration of database.js

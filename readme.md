@@ -9,6 +9,7 @@ Please note that these instructions assume that Node.js is already properly inst
   * Each website must have its own folder inside the `/static` directory
   * The server will automatically search for and serve an `index.html` file in each directory, and then it will serve the first HTML file that it finds.
     * There are **no guarantees** for the server to find one HTML file over another in any order
+
 * The static file server has 3 main folders, each for different website types. These are:
   * `/static`
   * `/init`
@@ -16,12 +17,18 @@ Please note that these instructions assume that Node.js is already properly inst
   * `/404`
     * The contents of this folder are also 100% customizable, except that, like `/init`, it **must** contain an `index.html` file, or it will serve the contents of `/dependencies/500.html`
       * `/dependencies/500.html` must be present in its current location (the server will not even start without it), but it is fully customizable as well.
+
 * Because of the way that the server looks for files, there are naming restrictions that must be taken into account. The following is the hierarchy with which the server attempts to find a file with the URL that a user types after the IP address of the navigation bar of their browser:
-  1. Attempts to match the URL after the IP address (for example, `/something/somethingelse/index.html`) perfectly with a path in one of `/static`, `/init`, or `/404` (for example, `/static/something/somethingelse/index.html`). Any other path found in another folder with this name will never be seen. If this fails then...
+  1. Attempts to perfectly match the URL after the IP address (for example, `/something/somethingelse/index.html`) with a path in one of `/static`, `/init`, or `/404` (for example, `/static/something/somethingelse/index.html`). Any other path found in another folder with this name will never be seen. If this fails then...
+
   2. Attempts to serve a dependency (CSS, JavaScript, etc.) from the last folder that contained a successfully loaded HTML file. Meaning that if the last successfully loaded HTML file is located at, for example, `/static/website` and the user is requesting, for example, `/javascript/dependency.js`, the server searches for `/static/website/javascript/dependency.js`. If this fails then...
+
   3. Attempts to serve the requested URL with `/index.html` attached to the end of it. For example, if the user requests `/init/this/path/to/website`, the server searches for `/init/this/path/to/website/index.html`. If this fails then...
+
   4. Attempts to serve the requested URL with any sort of HTML file attached to the end of it. Meaning that if, for example, the website is the `/static/website` directory, and it contains exactly one file called `website.html`, it will serve `/static/website/website.html`. If this fails then...
+
   5. It servers the HTML file and dependencies in the `/404` directory.
+
 * The `index.js` file has support for 2 command line arguments, each separated with a space (or more, but are still counted as one argument)
   * -v[erbose]: logs additional information about how each request is being processed to the terminal window
   * -d[ebug]: logs internal variable values for each request, along with error stacks that might mysteriously arise
@@ -29,8 +36,57 @@ Please note that these instructions assume that Node.js is already properly inst
 
 ### User Database Documentation
 For more advanced users that didn't need the explanations above and know about POST requests via the `form` HTML tag (or `AJAX`), the server also has very basic capabilities to create user accounts for your website.
-
-TODO: Add documentation
+* All database calls must be done using POST, must conform to the [standard query string](https://en.wikipedia.org/wiki/Query_string), and they must have the request URL in the format `WEBSITE`.`COMMAND`.`dbaccess`
+  * `WEBSITE` is the directory that will hold the users for `WEBSITE`
+    * This part of the URL (and usernames) are stripped of all characters that are not **A-Z**, **a-z**, **0-9**, **underscores**, or **hyphens**, before they are stored on the server
+      * ex.) #WEBSI!TE and @WEB&SIT^E will both be treated the same.
+    * ex.) Google.COMMAND.dbaccess -> will create and store users in `/dependencies/db/Google/...`
+  * `COMMAND` is one of 8 commands that can be called for data manipulation. The following are all valid commands, all of which are case-insentitive:
+    * `createuser`
+      * Required Query String Keys:
+        * `username` or `usr` = name of the user account
+        * `password` or `pass` = password to access the content of the user account
+    * `deleteuser`
+      * Required Query String Keys:
+        * `username` or `usr` = name of the user account
+        * `password` or `pass` = password to verify owner and delete the account
+    * `changename`
+      * Required Query String Keys:
+        * `username` or `usr` = name of the user account
+        * `password` or `pass` = password modify the account name
+        * `newusername` or `newusr` or `nusr` = the new name of the account
+    * `changepassword`
+      * Required Query String Keys:
+        * `username` or `usr` = name of the user account
+        * `password` or `pass` = password to access the content of the user account
+        * `newpassword` or `npass` = new password to verify the account
+    * `extractalldata`
+      * Required Query String Keys:
+        * `username` or `usr` = name of the user account
+        * `password` or `pass` = password to access the content of the user account
+    * `extractdata`
+      * Required Query String Keys:
+        * `username` or `usr` = name of the user account
+        * `password` or `pass` = password to access the content of the user account
+        * `datakey` or `dkey` = key of the value to pull from the account (case insensitive)
+    * `storealldata`
+      * Required Query String Keys:
+        * `username` or `usr` = name of the user account
+        * `password` or `pass` = password to access the content of the user account
+        * Any number of key-value query string keys. All will be stored to the account. Keys are always case insensitive
+    * `storedata`
+      * Required Query String Keys:
+        * `username` or `usr` = name of the user account
+        * `password` or `pass` = password to access the content of the user account
+        * `datakey` or `dkey` = key of the value to store in the account (case insensitive)
+        * `datakeyval` or `dkval` = value to store with `datakey` (or `dkey`)
+  * `dbaccess` identifies the URL as a database command. More dynamic POST methods may or may not be coming soon
+  * All `dbaccess` POST requests will return a JSON formatted string with one value called `label`, which will determine if the command went through as expected. There are 5 labels to keep track of
+    * `OK`   - The command functioned as expected
+    * `BAD`  - The command failed because the username and/or password is bad, or requested the `hash`/or `salt` values
+    * `AE`   - The account creation failed because the new username already exists
+    * `ERR`  - The server had an unexpected error
+    * `CDNE` - The command does not exist in the current configuration of `database.js`
 
 ## Future Development
 Once user database support runs reliably and data-race free, there may not be any more future development for this project, except for potentially figuring out a way to add dynamic page support. There exist many other libraries that ease this process, mainly `Express`, but if I were to include support for dynamic page generation, I would not want to use `Express` or any other large libraries like that because of potential unnecessary source overhead and weeks of documentation-reading to save minutes worth of work. Most likely though, this project will be wrapped in an executable file for the sake of simplicity on the user end.

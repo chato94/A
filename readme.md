@@ -1,11 +1,11 @@
 # A[ Server]
-This is a static file server that is powered by Node.js, meaning that it serves files to any and all devices that are on the same network as the hosting machine. It functions similarly to **WAMP** in that it's as simple as dragging and dropping all necessary dependencies and it works, but it also has its potential quirks, naming restrictions, and overall, naïve approaches to web standards that have been solved by *much* smarter people than myself.
+This is a static file server that is powered by Node.js, meaning that it serves files to any and all devices that are on the same network as the hosting machine. It functions similarly to WAMP in that it's as simple as dragging and dropping all necessary dependencies and it works, but it also has its potential quirks and naming restrictions. This is an adequate solution for users looking for a simple way to serve files on their local network and not just their machine.
 
 ## Instructions
-Please note that these instructions assume that Node.js is already properly installed on the machine, and that you know how to run any JavaScript using command lines. If not, check out these pages for instructions for [Windows](http://blog.teamtreehouse.com/install-node-js-npm-windows), [Linux](http://blog.teamtreehouse.com/install-node-js-npm-linux), and [Mac](http://blog.teamtreehouse.com/install-node-js-npm-mac). All directories described assume that you're in the folder that contains the `index.js` file that comes with the server.
+Please note that these instructions assume that Node.js is already properly installed on the machine, and that users know how to run any JavaScript using command lines. If not, these pages give detailed instructions for [Windows](http://blog.teamtreehouse.com/install-node-js-npm-windows), [Linux](http://blog.teamtreehouse.com/install-node-js-npm-linux), and [Mac](http://blog.teamtreehouse.com/install-node-js-npm-mac). All directories described assume that the user is in the folder that contains the `index.js` file that comes with the server. Note that Windows uses `\` instead of `/` to separate directories.
 
 ### Static File Serving Instructions
-* Add all files and directories that you want to serve into the `/static` directory.
+* Add all files and directories to serve as-is into the `/static` directory.
   * Each website must have its own folder inside the `/static` directory
   * The server will automatically search for and serve an `index.html` file in each directory, and then it will serve the first HTML file that it finds.
     * There are **no guarantees** for the server to find one HTML file over another in any order
@@ -39,7 +39,7 @@ Please note that these instructions assume that Node.js is already properly inst
   * None of the mentioned arguments can currently be changed during run time, only during initialization
 
 ### User Database Documentation
-For more advanced users that didn't need the explanations above and know about POST requests via the `form` HTML tag (or `AJAX`), the server also has very basic capabilities to create user accounts for your website.
+For more advanced users that didn't need the explanations above and know about POST requests via the `form` HTML tag (or `AJAX`), the server also has very basic capabilities to create user accounts for websites.
 * All database calls must be done using POST, must conform to the [standard query string](https://en.wikipedia.org/wiki/Query_string), and they must have the request URL in the format `WEBSITE`.`COMMAND`.`dbaccess`
   * `WEBSITE` is the directory that will hold the users for `WEBSITE`
 
@@ -86,7 +86,8 @@ For more advanced users that didn't need the explanations above and know about P
       * Required Query String Keys:
         * `username` or `usr` = name of the user account
         * `password` or `pass` = password to access the content of the user account
-        * Any number of key-value query string keys. All will be stored to the account. Keys are always case insensitive
+        * Any number of key-value query string keys. All will be stored to the account. Keys are always case insensitive, but they must not match any of the following:
+          * `newpassword`, `npass`, `newusername`, `newusr`, `nusr`, `datakey`, or `dkey`
 
     * `storedata`
       * Required Query String Keys:
@@ -94,6 +95,7 @@ For more advanced users that didn't need the explanations above and know about P
         * `password` or `pass` = password to access the content of the user account
         * `datakey` or `dkey` = key of the value to store in the account (case insensitive)
         * `datakeyval` or `dkval` = value to store with `datakey` (or `dkey`)
+
   * `dbaccess` identifies the URL as a database command. More dynamic POST methods may or may not be coming soon
 
   * All `dbaccess` POST requests will return a JSON formatted string with one value called `label`, which will determine if the command went through as expected. There are 5 labels to keep track of
@@ -105,7 +107,7 @@ For more advanced users that didn't need the explanations above and know about P
     * `CDNE` - The command does not exist in the current configuration of `database.js`
 
 ## Future Development
-Once user database support runs reliably and data-race free, there may not be any more future development for this project, except for potentially figuring out a way to add dynamic page support. There exist many other libraries that ease this process, mainly `Express`, but if I were to include support for dynamic page generation, I would not want to use `Express` or any other large libraries like that because of potential unnecessary source overhead and weeks of documentation-reading to save minutes worth of work. Most likely though, this project will be wrapped in an executable file for the sake of simplicity on the user end.
+Once user database support runs reliably and data-race free, there may not be any more future development for this project, except for potentially figuring out a way to add dynamic page support. There exist many other libraries that ease this process, mainly `Express`, but should support for dynamic page generation be included, it would most likely not use `Express` or any other large libraries like that because of potential unnecessary source overhead and weeks of documentation-reading to save minutes worth of work. Most likely though, this project will be wrapped in an executable file for the sake of simplicity on the user end.
 
 ## Project History and Past Development
-For those *potentially* mildly interested in how this project came about, it started with the need to test a website that I was developing on iOS devices. Searching for "how to make an intranet" brings up a bunch of useless jargon, except for maybe WAMP and WAMP equivalents, but the problem is that they don't have easy ways to go from `localhost` to being broadcast on the router. Thus came *A Server 2.0*, the first successful iteration of the *A Server* project that actually ran on Wi-Fi (before that, I had a complete and utter failure not even worth mentioning). There was another iteration of the *A Server* project called *A Server 3.0*, but both 2.0 and 3.0 were based on intense processing of the incoming URL to figure out what to read from the hard drive. It operated on a similar hierarchy, meaning that the exact path was checked first, then merged with the previous served HTML file, etc., but I realized that it would be much easier (and less CPU intensive) to just have a list of all valid paths at any given time, and thus began the complete re-write of the server. With all of that mentioned, I guess that this is better for people that don't know exactly what they are doing, but want to host files on their local network like on an Intranet.
+For those interested in how this project came about, it started with the need to test a website on iOS devices. Searching for "how to make an intranet" brings up a bunch of useless jargon, except for maybe WAMP and WAMP equivalents, but the problem is that they don't have easy ways to go from `localhost` to being broadcast on the router for multiple devices to see. Thus came *A Server 2.0*, the first successful iteration of the *A Server* project that actually ran on Wi-Fi (*A Server 1.0* was an unsuccessful hodgepodge of libraries and Stack Overflow code). There was another iteration of the *A Server* project called *A Server 3.0*, which was basically a shorter, re-factored version of *A Server 2.0*, but both 2.0 and 3.0 were based on intense processing of the incoming URL to figure out what to read from the hard drive. It operated on a similar hierarchy, meaning that the exact path was checked first, then merged with the previous served HTML file, etc., but it turned out that it would be much easier, effective, and efficient to just have a list of all valid paths at any given time paired with logarithmic binary search for speed, and thus began the complete re-write of the server.

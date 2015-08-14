@@ -10,7 +10,6 @@
 var fs = require ('fs'), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', pth = __dirname + S,
 p0 = pth + 'static', p1 = pth + 'init', p2 = pth + '404', allPaths = bfs (p0, p1, p2),
 dRGX = new RegExp ('^' + deRegEx (__dirname)), SECONDS = 0.25, p = process;
-console.log ('\n"dirwatch.js" child process started!');
 
 allPaths.sort ();
 process.send (concat (allPaths));

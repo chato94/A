@@ -1,8 +1,6 @@
 /*********************************************************************************************
  * THE FOLLOWING ARE REQUIRED Node.js LIBRARIES AND GLOBAL VARIABLES FOR STATIC FILE SERVING *
  *********************************************************************************************/
-$('Command line args: ' + (process.argv.length - 2));
-
 var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process'),
     Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', S_IP = localIPAddress (),
     PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0', verbose = false, debug = false, server;
@@ -42,6 +40,8 @@ for (var i = 2; i < args.length; i++) {
     else if (args[i].match (/-?d(ebug)?$/i)) debug = true;
     else dMssg? $(uA + (i+1) + ': "' + args[i] + '"'):(function(){$(aMssg); dMssg = 1; $(uA + (i+1) + ': "' + args[i] + '"');})();
 }
+
+if (debug) $('Additional command line arguments: ' + (process.argv.length - 2));
 
 /***********************************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE THE TREE-LIKE FLOW OF CALLBACKS THAT STEM FROM CLIENT REQUESTS FOR THE SERVER TO HANDLE *

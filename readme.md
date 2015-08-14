@@ -2,7 +2,7 @@
 This is a static file server that is powered by Node.js, meaning that it serves files to any and all devices that are on the same network as the hosting machine. It functions similarly to WAMP in that it's as simple as dragging and dropping all necessary dependencies and it works, but it also has its potential quirks and naming restrictions. This is an adequate solution for users looking for a simple way to serve files on their local network and not just their machine.
 
 ## Instructions
-Please note that these instructions assume that Node.js is already properly installed on the machine, and that users know how to run JavaScript files from the terminal using command lines. If not, these pages give detailed instructions for [Windows](http://blog.teamtreehouse.com/install-node-js-npm-windows), [Linux](http://blog.teamtreehouse.com/install-node-js-npm-linux), and [Mac](http://blog.teamtreehouse.com/install-node-js-npm-mac). All directories described in the following instructions assume that the user is in the folder that contains the `index.js` file that comes with the server. Note that Windows uses `\` instead of `/` to separate directories.
+Please note that these instructions assume that Node.js is already properly installed on the machine. For users that do not know how to use command lines and are running Windows, simply run the `run.cmd` file and the server will start (without verbose logging or debugging). If Node.js is not installed, these pages give detailed instructions for [Windows](http://blog.teamtreehouse.com/install-node-js-npm-windows), [Linux](http://blog.teamtreehouse.com/install-node-js-npm-linux), and [Mac](http://blog.teamtreehouse.com/install-node-js-npm-mac). All directories described in the following instructions assume that the user is in the folder that contains the `index.js` file that comes with the server. Note that Windows uses `\` instead of `/` to separate directories.
 
 ### Static File Serving Instructions
 * Add all files and directories to serve as-is into the `/static` directory.
@@ -44,6 +44,9 @@ Please note that these instructions assume that Node.js is already properly inst
   * `-d[ebug]`: logs internal variable values for each request, along with error stacks that might mysteriously arise
 
   * None of the mentioned arguments can currently be changed during run time, only during initialization
+
+* The home page of the static file server (`/init`) makes use of a specially treated GET request url `/static.directory`.
+  * When a page or user requests for `/static.directory`, the server will respond with a JSON string with a `"static"` key, and either `"ERR"` as the value if something went wrong with reading the `/static` directory, or with an array `[website1,website2,...,website_n]` of all websites found in the `/static` directory at requeset time.
 
 ### User Database Documentation
 For users that know about POST requests via the `form` HTML tag (or `AJAX`), the server also has basic capabilities to create user accounts for websites.

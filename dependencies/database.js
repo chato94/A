@@ -132,12 +132,12 @@ var handlers = {
     },
 
     changename: function (usr, pass, nName) {
-        var validation = validate (usr, pass), status = validation[0], content = validation[1];
+        var validation = validate (usr, pass), status = validation[0], content = validation[1], deps = './dependencies/db/';
         $dvnt('changename called!');
         if (status === 'OK') {
             try {
                 $nt(IP + ') Re-naming user "' + usr + '" to "' + nName + '"');
-                fs.renameSync ('./dependencies/db/' + website + '/' + usr + '.user', './dependencies/db/' + website + '/' + nName + '.user');
+                fs.renameSync (deps + website + '/' + usr + '.user', deps + website + '/' + nName + '.user');
                 return '{"label": "OK"}';
             } catch (err) {
                 $nt(IP + ') There was an error (most likely a data race renaming a user file');
@@ -212,7 +212,7 @@ var handlers = {
     storealldata: function (usr, pass, obj) {
         $dvnt('storealldata called!');
         var validation = validate (usr, pass), status = validation[0], content = validation[1], 
-            fd, BUFFER_POSITION = 0, FILE_POSTION = null;
+            fd, BUFFER_POSITION = 0, FILE_POSTION = null, file = './dependencies/db/' + website + '/' + usr + '.user';
         if (status === 'OK') {
             try {
                 $nt(IP + ') Storing/changing multiple data entries for user "' + usr + '"');
@@ -223,7 +223,7 @@ var handlers = {
                     }
                 }
 
-                fd = open ('./dependencies/db/' + website + '/' + usr + '.user', 'w'), buffer = new Buffer (JSON.stringify (content));
+                fd = open (file, 'w'), buffer = new Buffer (JSON.stringify (content));
                 if (fd) {
                     fs.writeSync (fd, buffer, BUFFER_POSITION, buffer.length, FILE_POSTION);
                     fs.closeSync (fd);

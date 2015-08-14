@@ -50,7 +50,7 @@ if (debug) $('Additional command line arguments: ' + (process.argv.length - 2));
 function fHTTP (rq, rs) {
     var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress;
     $n('\n*** ' + fN (fHTTP) + 'Incoming request heard! Initializing response for ' + IP + ' ***');
-    rq.method === 'GET'? GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
+    rq.method === 'GET'? rq.url === '/static.directory' dirCont (rq, rs, IP) : GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
 }
 
 /* Root function of the POST request handling function tree */
@@ -85,6 +85,16 @@ function POSTHandler (request, response, IP) {
             var html = uPOSTPage.replace (/#/, body);
             respondTo (url, response, IP, html, 404, 'text/html');
         }
+    });
+}
+
+/* Responds with a JSON of the folders found in the /static directory. Useful for the homepage, but any page can make use of it */
+function dirCont (request, rs, IP) {
+    var url = request.url, ip = IP + ') ' + fN (dirCont), jn = 'application/json', s0 = '{"static":', s1 = '}';
+    $nt(ip + 'Detected a directory read for /static!');
+    $dnt(ip + 'url: ' + url);
+    fs.readdir ('./static', function (e, dir) {
+        e? respondTo (url, rs, IP, s0 + '"ERR"' + s1, 500, jn) : respondTo (url, rs, IP, s0 + JSON.stringify (dir) + s1, 200, jn);
     });
 }
 

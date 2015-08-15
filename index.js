@@ -125,6 +125,9 @@ function send500 (url, response, IP, error) {
 function respondTo (url, response, IP, content, code, mime) {
     var ip = IP + ') ' + fN (respondTo);
     $nt(ip + 'Finalizing the response for: ' + url, ip + 'Status Code: ' + code);
+    
+    // Fix never ending response with an empty file by sending a space instead
+    content = !content.length? ' ' : content;
     response.writeHead (code, {'Content-Type': mime});
     response.write (content, function () {$n('*** Finished the response for ' + IP + ' ***'); response.end ();});
 }
@@ -272,8 +275,8 @@ function MIMEType (file) {
 
 /* Quietly attaches the "/static" directory to non-"/404" and non-"/init" queries and returns the string literal of request.url */
 function sDecodeURL (url) {
-    var i = '/index.html';    
-    return decodeURL (url === '/' || url === i? '/init' + i : url.match (/^\/404|^\/init/)? url : '/static' + url);
+    var i = '/index.html', f = '/favicon.ico', deps = '/dependencies', s = '/static';
+    return decodeURL (url === '/' || url === i? '/init' + i : url === f? deps + f : url.match (/^\/404|^\/init/)? url : s + url);
 }
 
 /* Returns the string literal of the encoded request.url */

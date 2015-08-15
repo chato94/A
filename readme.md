@@ -51,7 +51,7 @@ These instructions assume that Node.js is already properly installed on the mach
 * If a file is empty when a user requests it, the server responds with a space (`ASCII dec 32, 0x20`) rather than an empty string or buffer
   * No documentation clarifies whether this is bad code, web standard, or a Node bug, but it is what it is.
 
-* The database `favicon.ico` file must be in the `/dependencies` folder; however, it is possible for users to utilize their own icons in HTML via `<link id="favicon" rel="shortcut icon" href="/path/to/favicon.ico" type="image/x-icon"/>`.
+* The server `favicon.ico` file must be in the `/dependencies` folder; however, it is possible for static web developers to utilize their own via `<link id="favicon" rel="shortcut icon" href="/static/this/path/to/favicon.ico" type="image/x-icon"/>`.
 
 ### User Database Documentation
 For users that know about POST requests via the `form` HTML tag or `AJAX`, the server also has basic capabilities to create user accounts for websites.

@@ -48,6 +48,11 @@ These instructions assume that Node.js is already properly installed on the mach
 * The home page of the static file server (`/init`) makes use of a specially treated GET request url `/static.directory`.
   * When a page or user requests for `/static.directory`, the server will respond with a JSON string with a `"static"` key, and either `"ERR"` as the value if something went wrong with reading the `/static` directory, or with an array `[website1,website2,...,website_n]` of all websites found in the `/static` directory at request time.
 
+* If a file is empty when a user requests it, the server responds with a space (`ASCII dec 32, 0x20`) rather than an empty string or buffer
+  * No documentation clarifies whether this is bad code, web standard, or a Node bug, but it is what it is.
+
+* The database `favicon.ico` file must be in the `/dependencies` folder; however, it is possible for users to utilize their own icons in HTML via `<link id="favicon" rel="shortcut icon" href="/path/to/favicon.ico" type="image/x-icon"/>`.
+
 ### User Database Documentation
 For users that know about POST requests via the `form` HTML tag or `AJAX`, the server also has basic capabilities to create user accounts for websites.
 * All database calls must be done using POST, must conform to the [standard query string](https://en.wikipedia.org/wiki/Query_string) (5MB limit), and must have the request URL in the format `WEBSITE`.`COMMAND`.`dbaccess`

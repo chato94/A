@@ -7,8 +7,8 @@
  * thus explaining why the mapping is the way it is, and why it's simple to revert in case
  * it has to be that way.
  */
-var fs = require ('fs'), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', pth = __dirname + S,
-p0 = pth + 'static', p1 = pth + 'init', p2 = pth + '404', allPaths = bfs (p0, p1, p2),
+var fs = require ('fs'), S = require ('os').platform ().match (/^win\d+?/)? '\\' : '/', pth = __dirname + S, deps = 'dependencies'
+p0 = pth + 'static', p1 = pth + 'init', p2 = pth + '404', p3 = pth + deps + S + 'favicon.ico', allPaths = bfs (p0, p1, p2, p3),
 dRGX = new RegExp ('^' + deRegEx (__dirname)), SECONDS = 0.25, p = process;
 
 allPaths.sort ();
@@ -17,7 +17,7 @@ process.send (concat (allPaths));
 updatePaths ();
 
 function updatePaths () {
-    var d = bfs (p0, p1, p2);
+    var d = bfs (p0, p1, p2, p3);
 
     // Small optimization for speedup of directory equality checking
     if (d.length !== allPaths.length) {

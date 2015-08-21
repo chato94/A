@@ -63,7 +63,7 @@ For users that know about POST requests via the `form` HTML tag or `AJAX`, the s
     * This part of the URL (**and usernames**) are stripped of all characters that are not **A-Z**, **a-z**, **0-9**, **underscores**, or **hyphens** (in regex, `/[^A-Z0-9_\-]/gi`), before they are stored on the server
       * For example, `#WEBSI!TE` and `@WEB&SIT^E` will both be treated internally as `WEBSITE`, thus create unexpected errors if applications rely on the differences.
 
-    * These directories are created on the fly if they do not exist. There is currently no captcha system in place to prevent anybody from just creating an account if they have access to making custom POST requests, nor there is crrently code preventing a developer from one static website identifying his or her website as another.
+    * These directories are created on the fly if they do not exist. There is currently no captcha system in place to prevent anybody from just creating an account if they have access to making custom POST requests, nor there is currently code preventing a developer of one static website from identifying his or her website as another.
 
   * `COMMAND` is one of 8 commands that can be called for data manipulation. All `dbaccess` POST commands (except for the extraction commands) will return a `JSON` formatted string with one value called `"label"`, which will determine if the command went through as expected. The following are all valid commands, all of which are case-insentitive (usernames are stripped of all characters like `WEBSITE`):
     * `createuser`

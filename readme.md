@@ -60,7 +60,7 @@ For users that know about POST requests via the `form` HTML tag or `AJAX`, the s
 
     * For example, `Google.COMMAND.dbaccess` will run `COMMAND` for users in `/dependencies/db/Google/...`
   
-    * This part of the URL (**and usernames**) are stripped of all characters that are not **A-Z**, **a-z**, **0-9**, **underscores**, or **hyphens** (in regex, `/^A-Z0-9_\-/gi`), before they are stored on the server
+    * This part of the URL (**and usernames**) are stripped of all characters that are not **A-Z**, **a-z**, **0-9**, **underscores**, or **hyphens** (in regex, `/[^A-Z0-9_\-]/gi`), before they are stored on the server
       * For example, `#WEBSI!TE` and `@WEB&SIT^E` will both be treated internally as `WEBSITE`, thus create unexpected errors if applications rely on the differences.
 
     * These directories are created on the fly if they do not exist. There is currently no captcha system in place to prevent anybody from just creating an account if they have access to making custom POST requests, nor there is crrently code preventing a developer from one static website identifying his or her website as another.

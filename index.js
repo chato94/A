@@ -269,7 +269,7 @@ function fN (f) {
 
 /* Utilizes the comprehensive extension map to return the appropriate MIME type of a file */
 function MIMEType (file) {
-    var ext = /\..+$/, extension = file.match (ext)? file.match (ext)[0] : 'dne';
+    var ext = /\.[^.]+$/, extension = file.match (ext)? file.match (ext)[0] : 'dne';
     return extensionMap[extension] || 'text/plain';
 }
 

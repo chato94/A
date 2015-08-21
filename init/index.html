@@ -9,42 +9,9 @@
 		
 	<!-- Adding all script files and libraries at the end of the document -->
 	<script src="/js/jquery-2.1.4.min.js"></script>
-	<script src="/js/jquery-color.min.js"></script>
+	<!-- <script src="/js/jquery-color.min.js"></script>
 	<script src="/js/jquery.mCustomScrollbar.concat.min.js"></script>
-	<script src="/js/keypress-2.1.0.min.js"></script>
-	<script src="/js/init.js"></script>
-	<script>
-	var can = document.getElementById('loading');
-	var ctx = can.getContext('2d');
-	//ctx.arc(x,y,radius,startAngle,endAngle, anticlockwise);  
-
-	//ctx.beginPath()
-	//ctx.arc(100,100,100,0,Math.PI, false); // outer (filled)
-	// the tip of the "pen is now at 0,100
-	//ctx.arc(100,100,55,Math.PI,Math.PI*2, true); // outer (unfills it)
-	//ctx.fill();
-
-	var frame = 0, r0 = Math.min (can.width, can.height) * 0.25, r1 = 10 * r0 / 13;
-
-	console.log ('r0: ' + r0 + '; r1: ' + r1);
-
-	ctx.fillStyle = 'green';
-
-	function animate () {
-	    var deg = f (frame++);
-		ctx.clearRect (0, 0, can.width, can.height);
-	    ctx.beginPath ();
-	    ctx.arc (can.width / 2, can.height / 2, r0 - r1 * Math.cos (deg), 0, deg, false);
-	    ctx.arc (can.width / 2, can.height / 2, r1 - r1 * Math.cos (deg), deg, 2 * Math.PI, true);
-	    ctx.fill ();
-	    requestAnimationFrame (animate);
-	}
-
-	function f (x) {
-	    return -Math.PI * Math.cos (x / 60) + Math.PI;
-	}
-
-	animate ();
-	</script>
+	<script src="/js/keypress-2.1.0.min.js"></script> -->
+	<script src="/js/loading.js"></script>	
 	</body>
 </html>

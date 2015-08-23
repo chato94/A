@@ -14,8 +14,8 @@ var frame = 0, r0 = Math.min (can.width, can.height) * 0.4, r1 = 11 * r0 / 13;
 
     ctx.fillStyle = 'green';
     ctx.beginPath ();
-    ctx.arc (can.width / 2, can.height / 2, r0 - r1 * (1 - Math.cos (deg)) / 2, 0, deg, false);
-    ctx.arc (can.width / 2, can.height / 2, r1 - r1 * (1 - Math.cos (deg)) / 2, deg, 0, true);
+    ctx.arc (can.width / 2, can.height / 2, r0 - r1 * expF ((1 - Math.cos (deg)) / 2), mod (-Math.PI / 2, 2 * Math.PI), mod (deg - Math.PI / 2, 2 * Math.PI), false);
+    ctx.arc (can.width / 2, can.height / 2, r1 - r1 * expF ((1 - Math.cos (deg)) / 2), mod (deg - Math.PI / 2, 2 * Math.PI), mod (-Math.PI / 2, 2 * Math.PI), true);
     ctx.fill ();
 
     ctx.beginPath ();
@@ -24,6 +24,12 @@ var frame = 0, r0 = Math.min (can.width, can.height) * 0.4, r1 = 11 * r0 / 13;
     ctx.fill ();
     requestAnimationFrame (animate);
 })();
+
+function expF (p) {var b = 5, c = 4; return (Math.pow(b, c * p - c) - Math.pow(b, -c)) / (1 - Math.pow(b, -c));}
+
+function mod (x, y) {
+    return x < 0? y - (-x % y) : x % y;
+}
 
 /**
  * Creates a loading icon like the one at http://reddit.com/r/loadingicon/comments/293lqt/bored_at_work_so_look_what_i_made/
@@ -36,22 +42,20 @@ var frame = 0, r0 = Math.min (can.width, can.height) * 0.4, r1 = 11 * r0 / 13;
  *           glowColor  - 'rgb([0, 255], [0, 255], [0, 255])': marks the color of the loading circumference when glowing
  *           glowFrames - [0, inf): specifies the number of frames to make each section glow when they hit the edge (completion is twice as long)
  *           outerColor - 'rgb([0, 255], [0, 255], [0, 255])': marks the color of the loading circumference
- *           startingRadian - [0, 2pi]: radian value of the location of the starting point of the loading animation along the circumference
+ *           radianDisplacement - [0, TAU): radian value added to the starting point of the loading animation along the circumference (mod TAU)
  *           radius     - [0, inf): specifies the radius of the outer circle of the loading icon
+ *           rframes    - [0, inf): specifies the number of frames to animate the traveling sections
  *           pRWidth    - [0, 1]: specifies the percentage of the radius that will be dedicated to loadColor (thickness of donut)
  */
 function LoadingIcon (canvas, opt) {
-    var N_FRAMES = opt.glowFrames || 24, TAU = 2 * Math.PI, ROT = opt.startingRadian || TAU / 4,
+    var N_FRAMES = opt.glowFrames || 24, TAU = 2 * Math.PI,
 
         lColor = opt.loadColor || 'rgb(0, 153, 0)', gColor = opt.glowColor || 'rgb(128, 255, 0)', oColor = opt.outerColor || 'rgb(200, 200, 200)',
-        globalColorTweener = new ColorTweener (lColor, gColor, N_FRAMES),
+        globalColorTweener = new ColorTweener (lColor, gColor, N_FRAMES), nTF = opt.rframes || 20 /*numTravelingFrames*/,
         can = canvas, ctx = can.getContext ('2d'), r = opt.radius || 0.25 * Math.min (can.width, can.height), r1 = r * (opt.pRWidth || 0.0625);
 
     // sects is for animating individual sections to the circumference, and per store the previous and current percentage values
-    var sects = [], pPrev = 0, pCurr = 0, rotTheta = 3 * Math.PI / 2;
-
-    // Stores the global alpha value of the icon. The value should always be [0, 1], and is used to fade out the icon when done.
-    this.alpha = 1;
+    var sects = [], pPrev = 0, pCurr = 0, rot = opt.radianDisplacement || -TAU / 4;
 
     // Animates the loading icon to the next stage. Note that it clears the context first
     this.draw = function (x, y) {
@@ -65,7 +69,7 @@ function LoadingIcon (canvas, opt) {
         draw (1, oColor, 0, TAU, x, y);
 
         // Draw the completed progress with loadColor
-        draw (1, lColor, 0, TAU * pCurr / 100, x, y);
+        draw (1, lColor, 0, TAU * pPrev / 100, x, y);
 
         // Draw the transitioning sections
 
@@ -85,16 +89,18 @@ function LoadingIcon (canvas, opt) {
 
     this.updatePercentage = function (quantity) {
         // Percentage loaded can only go forward
-        per += Math.abs (+quantity);
-        if (per > 100) per = 100;
+        pPrev = pCurr;
+        pCurr += Math.abs (+quantity);
+        if (pCurr > 100) pCurr = 100;
 
-        // Create a new transitioning section based on the difference between the new per value and the old per value
-        sects.push ();
+        // Create a new transitioning section based on the difference between pPrev and pCurr
+        sects.push (new TravelingSection ());
         return this;
     };
 
     // Draws a section of a donut at per[cent] radius with the specified color from t0 to t1 radians centered at (x, y)
-    function draw (per, color, t0, t1, x, y) {
+    function draw (per, color, t0, t1, x, y, pThick) {
+        if (arguments.length === 6) pThick = 1; // percent thickness
         ctx.fillStyle = color;
         ctx.beginPath ();
 
@@ -102,62 +108,64 @@ function LoadingIcon (canvas, opt) {
         ctx.arc (x, y, per * r, t0, t1, false);
 
         // Then covers the circle formed by backtracking over the smaller radius
-        ctx.arc (x, y, per * r1, t1, t0, true);
+        ctx.arc (x, y, per * r1 + (1 - pThick) * (r - r1), t1, t0, true);
 
         // Fills in the newly formed path
         ctx.fill ();
     }
 
     // Returns x % y like in Python
-    function mod (x, y) {
-        // Treat all +- values of x % y as |x| % |y|
-        return Math.abs (x) % Math.abs (y);
-    }
-
-    // Returns the point (x, y) in an array [x', y'] rotated t radians about the point (h, k)
-    function rot (x, y, t, h, k) {
-        return [x * Math.cos (t) - y * Math.sin (t) + h, x * Math.sin (t) + y * Math.cos (t) + k];
-    }
+    function mod (x, y) {return x < 0? y - (-x % y) : x % y;}
 
     /**
      * Handles properties of traveling sections like speed, color, and duration
      *
      * Arguments:
-     *     theta0, theta1  - [0, TAU]: starting and ending radian values defining the boundaries of the section
+     *     theta0, theta1  - [0, TAU): starting and ending radian values defining the boundaries of the section
      *     numFrames       - [0, inf): the number of frames that the section will be animating towards the edge
      *     tweener         - ColorTweener: the ColorTweener that will be used to "glow" when the section touches the edge
      *     percentEmerging - [0, 1]: the percentage of the frames that will be used to "emerge" from the center
+     *     numRadFrames    - [0, inf): the number of frames that the radiating section will be animating
      */
-    function TravelingSection (theta0, theta1, numFrames, tweener, percentEmerging) {
+    function TravelingSection (theta0, theta1, numFrames, tweener, percentEmerging, numRadFrames) {
         // Cache the incoming arguments as they will be necessary throughout the entire animation for drawing purposes
-        var t0 = theta0, t1 = theta1, n = numFrames, tw = tweener,
+        var t0 = theta0, t1 = theta1, n = numFrames, tw = tweener, tweeningToGlow = true;
             keyFrame = Math.floor (percentEmerging * n), k = keyFrame / n, i = 0, p = 0;
+            radiator = new RadiatingSection (numRadFrames)
 
         // Flag that marks if the section is done glowing (using the tweener)
         var finishedGlowing = false;
 
         // Used to determine if the section is done animating or not
-        this.done = function () {
-            return i >= (n + 1) && finishedGlowing;
-        };
+        this.done = function () {return i >= (n + 1) && finishedGlowing;};
 
         // Draws the current state of this to the canvas
-        this.draw = function () {
+        this.draw = function (x, y) {
+            draw (p, tw.color (), t0, t1, x, y);
             return this;
         };
 
         // Advances the section one step further
         this.step = function () {
-            // Emerge from the center if i is less than keyFrame (frame calculated from percentEmerging)
+            // Emerge from the center if i is less than keyFrame (frame calculated from percentEmerging) using jQuery cosine
             if (i++ < keyFrame) {
                 p = c (normalizeEm (i / n)) * (keyFrame - 1) / n;
             }
 
-            // Apply the jQuery cosine transformation function to per to cover the remaining ground with respect to i
+            // Apply exponential transformation to p to cover the remaining ground with respect to i
             else {
-                p = c (normalize (i / n)) * (1 - k) + (k);
+                p = e (normalize (i / n)) * (1 - k) + (k);
 
-                if (i === n) finishedGlowing = true;
+                // Begin the glowing and radiating animation if done traveling
+                if (i >= n) {
+                    if (tweeningToGlow) {
+                        tw.step ();
+                        if (tw.done ()) tweeningToGlow = false;
+                    } else {
+                        tw.undo ();
+                        if (tw.atStart ()) finishedGlowing = true;
+                    }
+                }
             }
 
             // Normalization from 0 to (keyFrame - 1) / n
@@ -166,19 +174,45 @@ function LoadingIcon (canvas, opt) {
             // Normalization from k to 1
             function normalize (p) {if (p > 1) p = 1; return (p - (k)) / (1 - k);}
 
+            // Cosine transformation for emerging animation
+            function c (p) {return (1 - Math.cos (Math.PI * p)) / 2;}
+
+            // Exponential transformation for the sending animation (slow, then fast)
+            function e (p) {var b = 5, j = 4; return (Math.pow(b, j * p - j) - Math.pow(b, -j)) / (1 - Math.pow(b, -j));}
+
+            return this;
+        };
+    }
+
+    /**
+     * Handles the little radiating section that is given off when a traveling section hits the wall of the containing donut
+     *
+     * Arguments:
+     *     theta0       - [0, TAU): starting radian of the radiating section
+     *     theta1       - [0, TAU): ending radian of the radian section
+     *     numRadFrames - [0, inf): the number of frames the section will radiate
+     *     rPercentage  - [0, inf): the percentage of the radius (1 is 100%) that the section will radiate; 1 is added to the value provided
+     *           pThick - [0, inf): the percentage of the thickness of the circumference to make the radiating section
+     */
+    function RadiatingSection (theta0, theta1, numRadFrames, rPercentage, pThick) {
+        var t0 = theta0, t1 = theta1, n = numRadFrames, pT = pThick, rPer = rPercentage, i = 0;
+
+        this.draw = function (x, y) {
+            draw (1 + e (i / n) * rPer, lColor, t0, t1, x, y, pT);
             return this;
         };
 
-        // Cosine transformation for emerging animation
-        function c (p) {
-            return (1 - Math.cos (Math.PI * p)) / 2;
-        }
+        this.step = function () {
+            i++
+            return this;
+        };
 
-        // Exp transformation for the sending animation
-        function s (p) {
-            var c = 5;
-            return (Math.exp (c * p - c) - Math.exp (-c)) / (1 - Math.exp (-c));
-        }
+        this.done = function () {
+            return i >= n;
+        };
+
+        // Exp transformation for the radiating animation (fast, then slow)
+        function e (p) {var b = 5, c = 4; return p >= 1? 1 : -(Math.pow(b, c * p - c) - Math.pow(b, -c)) / (1 - Math.pow(b, -c)) + 1}
     }
 
     /**
@@ -198,6 +232,11 @@ function LoadingIcon (canvas, opt) {
         // Marks whether the color was completely faded through the first time
         this.done = function () {
             return i === (n + 1);
+        };
+
+        // Returns whether the animation is at the starting point or not
+        this.atStart = function () {
+            return i <= 0;
         };
 
         // Fades the current RGB one step (over n steps) closer to the ending RGB

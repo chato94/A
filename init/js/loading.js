@@ -1,14 +1,65 @@
-$(function () {
+/**
+ * Taken from https://github.com/jfriend00/docReady/blob/master/docready.js
+ *
+ * Copies jQuery's 'ready' function without the entire library breathing down
+ * the website's neck as the loading icon is working.
+ */
+(function (func, obj) {
+    'use strict';
+    func = func || 'domReady';
+    obj = obj || window;
+    var readyList = [], readyFired = false, installed = false;
+
+    function ready () {
+        if (!readyFired) {
+            readyFired = true;
+            for (var i = 0; i < readyList.length; i++) readyList[i].fn.call (window, readyList[i].ctx);
+        }
+        readyList = [];
+    }
+
+    function readyStateChange () {
+        if (document.readyStat === 'complete') ready ();
+    }
+
+    obj[func] = function (callback, context) {
+        if (readyFired) {
+            setTimeout (function () {callback (context);}, 1);
+            return;
+        } else {
+            readyList.push ({fn: callback, ctx: context});
+        }
+
+        if (document.readyState === 'complete' || (!document.attachEvent && document.readyState === 'interactive')) {
+            setTimeout (ready, 1);
+        } else if (!installed) {
+            if (document.addEventListener) {
+                document.addEventListener ('DOMContentLoaded', ready, false);
+                window.addEventListener ('load', ready, false);
+            } else {
+                document.attachEvent ('onreadystatechange', readyStateChange);
+                window.attachEvent ('onload', ready);
+            }
+            installed = true;
+        }
+    };
+})('domReady', window);
+
+/**
+ * Code that initializes the loading icon and all necessary operations for a smooth opening animation
+ * to the A Server homepage.
+ */
+domReady (function () {
     var can = document.getElementById ('loading'), ctx = can.getContext ('2d');
 
-    ctx.canvas.width = window.innerWidth;
-    ctx.canvas.height = window.innerHeight;
+    can.width = window.innerWidth;
+    can.height = window.innerHeight;
     
     var frame = 0, c0 = 0.4, c1 = 11 / 13, r0 = Math.min (can.width, can.height) * c0, r1 = r0 * c1;
 
-    $(window).resize (function () {
-        ctx.canvas.width = window.innerWidth;
-        ctx.canvas.height = window.innerHeight;
+    addEvent (window, 'resize', function () {
+        can.width = window.innerWidth;
+        can.height = window.innerHeight;
         r0 = Math.min (can.width, can.height) * c0;
         r1 = r0 * c1;
     });
@@ -64,44 +115,48 @@ function LoadingIcon (canvas, opt) {
         lColor = opt.loadColor || 'rgb(0, 153, 0)',
         gColor = opt.glowColor || 'rgb(128, 255, 0)',
         oColor = opt.outerColor || 'rgb(200, 200, 200)',
-        globalColorTweener = new ColorTweener (lColor, gColor, N_FRAMES),
         nTF = opt.tFrames || 20, // number of traveling frames
         pETF = opt.pEmTravFrames || 20, // percentage of frames used to emerge from the circle for traveling sections
         nRF = opt.numRadFrames || 20, // number of frames for radiating sections
         ctx = can.getContext ('2d'),
         can = canvas,
         r = opt.radius || 0.25 * Math.min (can.width, can.height),
-        r1 = r * (opt.pRWidth || 0.0625);
+        r1 = r * (opt.pRWidth || 0.0625),
+        rot = opt.radianDisplacement || -TAU / 4,
+        globalColorTweener = new ColorTweener (lColor, gColor, N_FRAMES * 2),
+        globalRadiator = new RadiatingSection (0, TAU, nRF * 2, opt.glRadPercentage || 0.1, opt.glRadThickness || 0.25);
 
     // sects is for animating individual sections to the circumference, and per store the previous and current percentage values
-    var sects = [], pPrev = 0, pCurr = 0, pDone = 0, rot = opt.radianDisplacement || -TAU / 4;
+    var sects = [], pPrev = 0, pCurr = 0, pDone = 0, finishedGlobalRadiation = false, globalAnimatingToGlow = true;
 
-    // Animates the loading icon to the next stage. Note that it clears the context first
+    // Draws the current state of the loading icon to the canvas
     this.draw = function (x, y) {
+        // Set the x and y variables as they are required to draw the necessary arcs of the loading icon
         if (arguments.length === 1) y = can.height / 2;
         if (arguments.length === 0) {x = can.width / 2, y = can.height / 2;}
 
-        // if (!this.done ()) {
+        // Clear the screen to prevent trailing
         ctx.clearRect (0, 0, can.width, can.height);
 
         // Draw the outer fill/container ring
         draw (1, oColor, 0, TAU, x, y);
 
-        // Draw the percent done (pDone) with loadColor (lColor)
+        // Draw the percent done (pDone) with the global tweener color
         draw (1, globalColorTweener.color (), mod (0 + rot, TAU), mod (ptoR (pDone) + rot, TAU), x, y);
 
         // Draw the transitioning sections
+        for (var i = 0; i < sects.length; i++) sects[i].draw (x, y);
 
         // Draw the center circle and the text with the percent status
+        draw (0, oColor, 0, TAU, x, y);
+
+        return this;
     };
 
     // Returns whether the loading icon is at both 100% and finished animating
-    this.done = function () {
-        // Only need to check the last section as sections are synchronous
-        return sects.length && sects[sects.length - 1].done () && pCurr === 100;
-    };
+    this.done = function () {return finishedGlobalRadiation;};
 
-    // Steps the loading icon one instance further in frame time
+    // Steps the loading icon one instance further in frame-time space
     this.tick = function (quantity) {
         // Add the absolute value of the quantity of percent, if any, to pCurr
         if (arguments.length === 1) {
@@ -111,6 +166,32 @@ function LoadingIcon (canvas, opt) {
 
             // Add the new transitioning segment based on the difference between pCurr and pPrev
             sects.push (new TravelingSection (pToR (pPrev), pToR (pCurr), nTF, new ColorTweener (lColor, gColor, N_FRAMES), pETF, nRF));
+        }
+
+        // Update each traveling section's animation
+        for (var i = 0; i < sects.length; i++) {
+            if (sects[i].done ()) {
+                pDone = sects[i].endPercent ();
+                sects[i] = false;
+            } else {
+                sects[i].step ();
+            }
+        }
+
+        // Remove all false (finished) sections
+        while (sects.length) {
+            if (!sects[0]) sects.splice (0, 1);
+            else break;
+        }
+
+        // Start ticking the final global animation if pDone is at 100
+        if (pDone === 100) {
+            if (globalAnimatingToGlow) globalColorTweener.step ();
+            else globalColorTweener.undo ();
+
+            // TODO: finish writing the global radiation animation tick and adjust draw for this
+
+            if (globalColorTweener.done ()) globalAnimatingToGlow = false;
         }
 
         return this;
@@ -150,19 +231,24 @@ function LoadingIcon (canvas, opt) {
      */
     function TravelingSection (theta0, theta1, numFrames, tweener, percentEmerging, numRadFrames) {
         // Cache the incoming arguments as they will be necessary throughout the entire animation for drawing purposes
-        var t0 = theta0, t1 = theta1, n = numFrames, tw = tweener, tweeningToGlow = true;
-            keyFrame = Math.floor (percentEmerging * n), k = keyFrame / n, i = 0, p = 0;
+        var t0 = theta0,
+            t1 = theta1,
+            n = numFrames,
+            tw = tweener,
+            tweeningToGlow = true,
+            keyFrame = Math.floor (percentEmerging * n),
+            k = keyFrame / n,
+            i = 0, p = 0,
             radiator = new RadiatingSection (numRadFrames)
 
-        // Flag that marks if the section is done glowing (using the tweener)
-        var finishedGlowing = false;
 
         // Used to determine if the section is done animating or not
-        this.done = function () {return i >= (n + 1) && finishedGlowing;};
+        this.done = function () {return i >= (n + 1) && radiator.done ();};
 
         // Draws the current state of this to the canvas
         this.draw = function (x, y) {
             draw (p, tw.color (), t0, t1, x, y);
+            if (i >= n) radiator.draw (x, y, easing);
             return this;
         };
 
@@ -184,8 +270,10 @@ function LoadingIcon (canvas, opt) {
                         if (tw.done ()) tweeningToGlow = false;
                     } else {
                         tw.undo ();
-                        if (tw.atStart ()) finishedGlowing = true;
                     }
+
+                    // Step the radiator regardless of color tweening direction
+                    radiator.step ();
                 }
             }
 
@@ -203,6 +291,16 @@ function LoadingIcon (canvas, opt) {
 
             return this;
         };
+
+        // Returns the value that will be assigned to pDone
+        this.endPercent = function () {
+            return t1 / TAU * 100;
+        }
+
+        // Easing function for the thickness of a radiating section
+        function easing (p) {
+            return 1 - Math.sqrt(p * (2 - p));
+        }
     }
 
     /**
@@ -213,10 +311,10 @@ function LoadingIcon (canvas, opt) {
      *     theta1       - [0, TAU): ending radian of the radian section
      *     numRadFrames - [0, inf): the number of frames the section will radiate
      *     rPercentage  - [0, inf): the percentage of the radius (1 is 100%) that the section will radiate; 1 is added to the value provided
-     *           pThick - [0, inf): the percentage of the thickness of the circumference to make the radiating section
+     *          pThick - [0, inf): the percentage of the thickness of the circumference to make the radiating section
      */
     function RadiatingSection (theta0, theta1, numRadFrames, rPercentage, pThick) {
-        var t0 = theta0, t1 = theta1, n = numRadFrames, pT = pThick, rPer = rPercentage, i = 0;
+        var t0 = theta0, t1 = theta1, n = numRadFrames, pT0 = pThick, rPer = rPercentage, i = 0;
 
         // Draws the radiating section to the canvas
         //
@@ -225,7 +323,7 @@ function LoadingIcon (canvas, opt) {
         //     easing - function: function that defines the transition of a percentage from 0 to 1, inclusive
         this.draw = function (x, y, easing) {
             if (!easing) easing = function (percentThickness) {return percentThickness;};
-            draw (1 + e (i / n) * rPer, lColor, t0, t1, x, y, easing (pT));
+            draw (1 + e (i / n) * rPer, lColor, t0, t1, x, y, easing (i / n) * pT0);
             return this;
         };
 
@@ -382,5 +480,25 @@ function LoadingIcon (canvas, opt) {
         this.toString = function () {
             return 'rgb(' + Math.floor (cRGB[0]) + ', ' + Math.floor (cRGB[1]) + ', ' + Math.floor (cRGB[2]) + ')';
         };
+    }
+}
+
+/**
+ * Cross-browser solution to adding an event to an object.
+ * Credit to Alex V at http://stackoverflow.com/questions/641857/javascript-window-resize-event
+ *
+ * Arguments:
+ *     object - any non-null, non-undefined object: object that will have an event listener attached to it
+ *     type   - 'event': name of the 
+ */
+function addEvent (object, type, callback) {
+    if (!object) return;
+    
+    if (object.addEventListener) {
+        object.addEventListener (type, callback, false);
+    } else if (object.attachEvent) {
+        object.attachEvent ('on' + type, callback);
+    } else {
+        object['on' + type] = callback;
     }
 }

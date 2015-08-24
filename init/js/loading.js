@@ -112,6 +112,7 @@ domReady (function () {
 function LoadingIcon (canvas, opt) {
     var N_FRAMES = opt.glowFrames || 24, TAU = 2 * Math.PI,
 
+        // Loading animation variables
         lColor = opt.loadColor || 'rgb(0, 153, 0)',
         gColor = opt.glowColor || 'rgb(128, 255, 0)',
         oColor = opt.outerColor || 'rgb(200, 200, 200)',
@@ -144,11 +145,25 @@ function LoadingIcon (canvas, opt) {
         // Draw the percent done (pDone) with the global tweener color
         draw (1, globalColorTweener.color (), mod (0 + rot, TAU), mod (ptoR (pDone) + rot, TAU), x, y);
 
-        // Draw the transitioning sections
-        for (var i = 0; i < sects.length; i++) sects[i].draw (x, y);
+        // Draw the transitioning sections, if any
+        if (sects.length) {
+            for (var i = 0; i < sects.length; i++) sects[i].draw (x, y);
+        }
+
+        // Begin the global radiation animation if pDone is at 100 percent when this.draw is called
+        else if (pDone === 100) {
+            globalRadiator.draw (x, y, easing);
+        }
 
         // Draw the center circle and the text with the percent status
         draw (0, oColor, 0, TAU, x, y);
+
+        // Draw the floored pecentage at the center of the circle
+        ctx.font = '' + Math.round(0.75 * (r - r0)) + 'px Tahoma';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = globalColorTweener.color ();
+        ctx.fillText (Math.floor(pCurr), x, y);
 
         return this;
     };
@@ -189,7 +204,8 @@ function LoadingIcon (canvas, opt) {
             if (globalAnimatingToGlow) globalColorTweener.step ();
             else globalColorTweener.undo ();
 
-            // TODO: finish writing the global radiation animation tick and adjust draw for this
+            globalRadiator.step ();            
+            if (globalRadiator.done ()) finishedGlobalRadiation = true;
 
             if (globalColorTweener.done ()) globalAnimatingToGlow = false;
         }
@@ -278,16 +294,16 @@ function LoadingIcon (canvas, opt) {
             }
 
             // Normalization from 0 to (keyFrame - 1) / n
-            function normalizeEm (p) {return p / (keyFrame - 1) / n;}
+            function normalizeEm (z) {return z / (keyFrame - 1) / n;}
 
             // Normalization from k to 1
-            function normalize (p) {if (p > 1) p = 1; return (p - (k)) / (1 - k);}
+            function normalize (z) {if (z > 1) z = 1; return (z - (k)) / (1 - k);}
 
             // Cosine transformation for emerging animation
-            function c (p) {return (1 - Math.cos (Math.PI * p)) / 2;}
+            function c (z) {return (1 - Math.cos (Math.PI * z)) / 2;}
 
             // Exponential transformation for the sending animation (slow, then fast)
-            function e (p) {var b = 5, j = 4; return (Math.pow(b, j * p - j) - Math.pow(b, -j)) / (1 - Math.pow(b, -j));}
+            function e (z) {var b = 5, j = 4; return (Math.pow(b, j * z - j) - Math.pow(b, -j)) / (1 - Math.pow(b, -j));}
 
             return this;
         };
@@ -296,11 +312,11 @@ function LoadingIcon (canvas, opt) {
         this.endPercent = function () {
             return t1 / TAU * 100;
         }
+    }
 
-        // Easing function for the thickness of a radiating section
-        function easing (p) {
-            return 1 - Math.sqrt(p * (2 - p));
-        }
+    // Easing function for the thickness of a radiating section
+    function easing (z) {
+        return 1 - Math.sqrt(z * (2 - z));
     }
 
     /**
@@ -320,10 +336,10 @@ function LoadingIcon (canvas, opt) {
         //
         // Arguments:
         //     x, y   - (-inf, inf): location of the center from which to radiate
-        //     easing - function: function that defines the transition of a percentage from 0 to 1, inclusive
-        this.draw = function (x, y, easing) {
-            if (!easing) easing = function (percentThickness) {return percentThickness;};
-            draw (1 + e (i / n) * rPer, lColor, t0, t1, x, y, easing (i / n) * pT0);
+        //     eFunc - function: function that defines the transition of a percentage from 0 to 1, inclusive
+        this.draw = function (x, y, eFunc) {
+            if (!easing) easing = function (p) {return p;};
+            draw (1 + e (i / n) * rPer, lColor, t0, t1, x, y, eFunc (i / n) * pT0);
             return this;
         };
 

@@ -49,6 +49,22 @@
  * Code that initializes the loading icon and all necessary operations for a smooth opening animation
  * to the A Server homepage.
  */
+var loadingIcon;
+domReady (function () {
+    var can = document.getElementById ('loading');
+    can.width = window.innerWidth;
+    can.height = window.innerHeight;
+
+    loadingIcon = new LoadingIcon (can);
+    (function load () {
+        loadingIcon.tick (1).draw ();
+        requestAnimationFrame (load);
+    })();
+});
+
+/**
+ * Original temporary placeholder for the loading icon to visualize the code needed to be written
+ *
 domReady (function () {
     var can = document.getElementById ('loading'), ctx = can.getContext ('2d');
 
@@ -90,7 +106,7 @@ domReady (function () {
     function expF (p) {var b = 5, c = 4; return (Math.pow(b, c * p - c) - Math.pow(b, -c)) / (1 - Math.pow(b, -c));}
 
     function mod (x, y) {return x < 0? y - (-x % y) : x % y;}
-});
+});*/
 
 /**
  * Creates a loading icon like the one at http://reddit.com/r/loadingicon/comments/293lqt/bored_at_work_so_look_what_i_made/
@@ -110,19 +126,20 @@ domReady (function () {
  *           pRWidth    - [0, 1]: specifies the percentage of the radius that will be dedicated to loadColor (thickness of donut)
  */
 function LoadingIcon (canvas, opt) {
+    if (arguments.length === 1) opt = {};
     var N_FRAMES = opt.glowFrames || 24, TAU = 2 * Math.PI,
 
         // Loading animation variables
+        can = canvas,
+        ctx = can.getContext ('2d'),
         lColor = opt.loadColor || 'rgb(0, 153, 0)',
         gColor = opt.glowColor || 'rgb(128, 255, 0)',
         oColor = opt.outerColor || 'rgb(200, 200, 200)',
         nTF = opt.tFrames || 20, // number of traveling frames
         pETF = opt.pEmTravFrames || 20, // percentage of frames used to emerge from the circle for traveling sections
         nRF = opt.numRadFrames || 20, // number of frames for radiating sections
-        ctx = can.getContext ('2d'),
-        can = canvas,
         r = opt.radius || 0.25 * Math.min (can.width, can.height),
-        r1 = r * (opt.pRWidth || 0.0625),
+        r1 = r * (opt.pRWidth || 1 - 0.125),
         rot = opt.radianDisplacement || -TAU / 4,
         globalColorTweener = new ColorTweener (lColor, gColor, N_FRAMES * 2),
         globalRadiator = new RadiatingSection (0, TAU, nRF * 2, opt.glRadPercentage || 0.1, opt.glRadThickness || 0.25);
@@ -143,7 +160,7 @@ function LoadingIcon (canvas, opt) {
         draw (1, oColor, 0, TAU, x, y);
 
         // Draw the percent done (pDone) with the global tweener color
-        draw (1, globalColorTweener.color (), mod (0 + rot, TAU), mod (ptoR (pDone) + rot, TAU), x, y);
+        draw (1, globalColorTweener.color (), mod (0 + rot, TAU), mod (pToR (pDone) + rot, TAU), x, y);
 
         // Draw the transitioning sections, if any
         if (sects.length) {
@@ -156,10 +173,10 @@ function LoadingIcon (canvas, opt) {
         }
 
         // Draw the center circle and the text with the percent status
-        draw (0, oColor, 0, TAU, x, y);
+        draw (0.5, oColor, 0, TAU, x, y);
 
         // Draw the floored pecentage at the center of the circle
-        ctx.font = '' + Math.round(0.75 * (r - r0)) + 'px Tahoma';
+        ctx.font = '' + Math.round(0.75 * (r - r1)) + 'px Tahoma';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = globalColorTweener.color ();
@@ -223,7 +240,8 @@ function LoadingIcon (canvas, opt) {
         ctx.arc (x, y, per * r, t0, t1, false);
 
         // Then covers the circle formed by backtracking over the smaller radius
-        ctx.arc (x, y, per * r1 + (1 - pThick) * (r - r1), t1, t0, true);
+        ctx.arc (x, y, r1 - r * (1 - pThick) * (1 - per), t1, t0, true);
+        //ctx.arc (x, y, per * r1 + (1 - pThick) * (r - r1), t1, t0, true);
 
         // Fills in the newly formed path
         ctx.fill ();
@@ -233,7 +251,7 @@ function LoadingIcon (canvas, opt) {
     function mod (x, y) {return x < 0? y - (-x % y) : x % y;}
 
     // Converts a [0, 100] percentage to a radian value
-    function ptoR (percentage) {return TAU * percentage / 100;}
+    function pToR (percentage) {return TAU * percentage / 100;}
 
     /**
      * Handles properties of traveling sections like speed, color, and duration
@@ -300,11 +318,12 @@ function LoadingIcon (canvas, opt) {
             function normalize (z) {if (z > 1) z = 1; return (z - (k)) / (1 - k);}
 
             // Cosine transformation for emerging animation
-            function c (z) {return (1 - Math.cos (Math.PI * z)) / 2;}
+            //function c (z) {return (1 - Math.cos (Math.PI * z)) / 2;}
+            function c (z) {return z;}
 
             // Exponential transformation for the sending animation (slow, then fast)
-            function e (z) {var b = 5, j = 4; return (Math.pow(b, j * z - j) - Math.pow(b, -j)) / (1 - Math.pow(b, -j));}
-
+            //function e (z) {var b = 5, j = 4; return (Math.pow(b, j * z - j) - Math.pow(b, -j)) / (1 - Math.pow(b, -j));}
+            function e (z) {return z;}
             return this;
         };
 
@@ -327,7 +346,7 @@ function LoadingIcon (canvas, opt) {
      *     theta1       - [0, TAU): ending radian of the radian section
      *     numRadFrames - [0, inf): the number of frames the section will radiate
      *     rPercentage  - [0, inf): the percentage of the radius (1 is 100%) that the section will radiate; 1 is added to the value provided
-     *          pThick - [0, inf): the percentage of the thickness of the circumference to make the radiating section
+     *     pThick       - [0, inf): the percentage of the thickness of the circumference to make the radiating section
      */
     function RadiatingSection (theta0, theta1, numRadFrames, rPercentage, pThick) {
         var t0 = theta0, t1 = theta1, n = numRadFrames, pT0 = pThick, rPer = rPercentage, i = 0;

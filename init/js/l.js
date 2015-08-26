@@ -67,15 +67,22 @@ function addEvent (object, type, callback) {
 
 var loadingIcon;
 domReady (function () {
-    var can = document.getElementById ('loading');
+    var can = document.getElementById ('loading'), frame = 0;
     can.width = window.innerWidth;
     can.height = window.innerHeight;
 
     loadingIcon = new SimpleLoadingIcon (can);
     (function load () {
-        loadingIcon.tick (0.75).draw ();
-        requestAnimationFrame (load);
+        loadingIcon.tick ().draw ();
+        if (frame++ % 25 === 0) loadingIcon.tick (3);
+        if (!loadingIcon.done ()) requestAnimationFrame (load);
     })();
+
+    addEvent (window, 'resize', function () {
+        can.width = window.innerWidth;
+        can.height = window.innerHeight;
+        loadingIcon.updateRadius ();
+    });
 });
 
 /**
@@ -97,296 +104,98 @@ domReady (function () {
  *           tFrames    - [0, inf): specifies the number of frames to animate the traveling sections
  *           pEmTravFrames - [0, 1]: the percent of tFrames that are spent emerging from the center circle
  */
-function LoadingIcon (canvas, opt) {
+function SimpleLoadingIcon (canvas, opt) {
     if (arguments.length === 1) opt = {};
     var TAU = 2 * Math.PI,
         can = canvas,
-        ctx = can.getContext ('2d'),
-        r0 = opt.radius || 0.25 * Math.min (can.width, can.height),
+        ctx = canvas.getContext ('2d'),
+        r0 = opt.radius || 0.35 * Math.min(can.width, can.height),
         r0x = opt.pRWidth || 1 - 0.125,
-        oColor = opt.outerColor || 'rgb(200, 200, 200)',
+        oColor = opt.outerColor || 'rgb(220, 220, 220)',
         lColor = opt.loadColor || 'rgb(0, 153, 0)',
         gColor = opt.glowColor || 'rgb(128, 255, 0)',
-        gFrames = opt.glowFrames || 24,
-        pETF = opt.pEmTravFrames || 0.2,
-        numTravFrames = opt.numTravelingFrames || 40,
-        numRadFrames = opt.numRadiatingFrames || 30,
+        twF = 50,
+        tw0 = new ColorTweener (lColor, gColor, 2),
+        tw1 = new ColorTweener (gColor, lColor, 20 * twF),
+        twC = tw0;
         rot = opt.radianDisplacement || -TAU / 4,
+        rRP = opt.radiatingRadiusPercentage || 0.5,
+        nRF = opt.numRadiatingFrames || 15,
+        glowing = true;
 
-        // Variables used when all traveling sections have finished going to the edge
-        globalColorTweener = new ColorTweener (lColor, gColor, gFrames * 2),
+    var pPrev = 0, pCurr = 0, pDone = 0;
 
-        globalRadiator = new RadiatingSection ({
-            theta0: 0,
-            theta1: TAU,
-            numRadiatingFrames: opt.globalNumRadiatingFrames || 20,
-            radiatingThicknessPercentage: opt.globalRadiatingThickness || 0.125,
-            radiatingThicknessEasing: function (z) {return 1 - Math.sqrt(z * (2 - z));}
-        });
+    this.draw = function (x, y) {
+        if (arguments.length === 1) y = can.height / 2;
+        else if (arguments.length === 0) {x = can.width / 2; y = can.height / 2;}
 
-    // Section holders and animation flags
-    var sects = [], pPrev = 0, pCurr = 0, pDone = 0, finishedGlobalRadiation = false, globalAnimatingToGlow = true;
+        ctx.clearRect (0, 0, can.width, can.height);
 
-    /******************************
-     * Public LoadingIcon methods *
-     ******************************/
-    // Returns whether this LoadingIcon is finished completely with its animation
-    this.done = function () {return finishedGlobalRadiation;};
-    
-    // 
+        // Draw the containing donut shape
+        draw (r0, r0 * r0x, oColor, 0, TAU, x, y);
+
+        // Draw the radiating segment
+        var s = rRP, n = nRF, rx = 1.155 * r0x;
+        if (pDone === 100) {
+            draw (r0 + r0 * s * (i / n), r0 * rx * (i / n * (1 / rx - 1) + 1) + r0 * s * (i / n), lColor, 0, TAU, x, y);
+        }
+
+        // Draw the current progress (add h to fix mod issue)
+        var h = 0.0000003;
+        draw (r0, r0 * r0x, twC.color (), mod (rot, TAU + h), mod (pToR (pDone) + rot, TAU + h), x, y);
+
+        // Draw the center circle
+        draw (r0 * (1 - r0x), 0, oColor, 0, TAU, x, y);
+
+        // Draw the percent text in the center of the circle
+        ctx.font = '' + Math.round(0.65 * r0 * (1 - r0x)) + 'px Open Sans';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = lColor;
+        ctx.fillText (pCurr < 100? Math.floor(pCurr) + '%' : 'done', x, y);
+
+        return this;
+    };
+
+    var i = 0, nRF = 25;
     this.tick = function (quantity) {
-        // Add the absolute value of the quantity of percent, if any, to pCurr
         if (arguments.length === 1) {
             pPrev = pCurr;
             pCurr += Math.abs(+quantity);
             if (pCurr > 100) pCurr = 100;
-
-            // Add a new transitioning segment based on the difference between pCurr and pPrev
-            sects.push (new TravelingSection ({
-                theta0: pToR (pPrev),
-                theta1: pToR (pCurr),
-                numFrames: numTravFrames,
-                percentEmerging: pETF,
-                numRadiatingFrames: numRadFrames
-            }));
+            pDone = pCurr;
         }
 
-        // Update each traveling section's animation, or mark it as false if it is done in order to be removed
-        for (var i = 0; i < sects.length; i++) {
-            if (sects[i] && sects[i].done ()) {
-                pDone = sects[i].pValue ();
-                sects[i] = false;
-            } else if (sects[i]) sects[i].tick ();
-        }
-
-        // Remove all finished sections
-        while (sects.length) {
-            if (!sects[0]) sects.splice (0, 1);
-            else break;
-        }
-
-        // Start ticking the final global animation if pDone is at 100
         if (pDone === 100) {
-            if (globalAnimatingToGlow) globalColorTweener.step ();
-            else globalColorTweener.undo ();
-
-            globalRadiator.tick ();
-            if (globalRadiator.done ()) finishedGlobalRadiation = true;
-            if (globalColorTweener.done ()) globalAnimatingToGlow = false;
+            twC.step ()
+            if (twC.done ()) twC = tw1;
+            i++;
+            if (i > nRF) i = nRF;
         }
 
         return this;
     };
-    
-    // Draws the current state of the loading icon to the canvas centered at the point (x, y)
-    this.draw = function (x, y) {
-        // Set the x and y variables if none are provided. WIll default to half of the canvas width/height, respectively
-        if (arguments.length === 1) y = can.height / 2;
-        else if (arguments.length === 0) {x = can.width / 2; y = can.height / 2;}
 
-        // Clear the screen to prevent trailing
-        ctx.clearRect (0, 0, can.width, can.height);
+    this.done = function () {return i >= nRF && twC.done ();};
 
-        // Draw the outer fill/container ring
-        /*bigR, littleR, color, theta0, theta1, x, y*/
-        //draw (1, oColor, 0, TAU, x, y);
-        draw (r0, r0 * r0x, oColor, 0, TAU, x, y);
+    // Updates r0 to resize the loading icon
+    this.updateRadius = function (val) {
+        if (!arguments.length) val = 0.35 * Math.min(can.width, can.height);
+        r0 = val;
 
-        // Draw the section on the outer fill/container ring that should just be one solid piece
-        //draw (1, globalColorTweener.color (), mod (rot, TAU), mod (pToR (pDone) + rot, TAU), x, y);
-        draw (r0, r0 * r0x, globalColorTweener.color (), mod (rot, TAU), mod (pToR (pDone) + rot, TAU), x, y);
-
-        // Draw the traveling sections, if any
-        if (sects.length) {
-            for (var i = 0; i < sects.length; i++) {
-                if (sects[i]) sects[i].draw (x, y);
-            }
-        }
-
-        // Draw the global radiator if pDone is 100
-        else if (pDone === 100) {
-            globalRadiator.draw (x, y);
-        }
-
-        // Draw the center circle and the text wit hthe percent status
-        //draw (0, oColor, 0, TAU, x, y);
-        draw (r0 * (1 - r0x), 0, oColor, 0, TAU, x, y);
-
-        // Draw the floored percentage at the center of the circle
-        ctx.font = '' + Math.round(0.75 * r0 * (1 - r0x)) + 'px Tahoma';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fontStyle = globalColorTweener.color ();
-        ctx.fillText (Math.floor(pCurr), x, y);
-
-        return this;
-    };
-
-    /**************************************
-     * Helper functions and child objects *
-     **************************************/
-    /**
-     * Handles the properties of the section of the donut that animates toward the outer edge
-     *
-     * Arguments:
-     *     opts - {opt0: val0, ...}: options for setting the internal properties of this TravelingSection
-     *       theta0             - [0, TAU]: radian defining the starting boundary of the section
-     *       theta1             - [0, TAU]: radian defining the ending boundary of the section
-     *       numFrames          - [0, inf): the number of frames that this traveling section will be animating
-     *       percentEmerging    - [0, 1]: the percentage of the frames that will be used to "emerge" from the center
-     *       numRadiatingFrames - [0, inf): the number of frames that the radiating section will be animating
-     */
-    function TravelingSection (opts) {
-        if (!arguments.length) opts = {};
-        var t0 = opts.theta0 || 0,
-            t1 = opts.theta1 || TAU,
-            n = opts.numFrames || 60,
-            kF = Math.floor((opts.percentEmerging || 0.2) * n),
-            nRF = opts.numRadiatingFrames || 40,
-            tw = opts.colorTweener || new ColorTweener (lColor, gColor, gFrames);
-            tweeningToGlow = true,
-            radiator = new RadiatingSection ({
-                theta0: t0,
-                theta1: t1,
-                numRadiatingFrames: nRF,
-                radiatingThicknessEasing: function (z) {return 1 - Math.sqrt(z * (2 - z));}
-            }),
-
-            k = kF / n, // variable caching
-            i = 0,      // index holder
-            p = 0;      // percentage of radius after cosine/exponential transformation
-
-        // Returns whether this section is fully finished animating on the canvas or not
-        this.done = function () {return radiator.done ()};
-
-        // Advances this TravelingSection one unit forward in animation time
-        this.tick = function () {
-            // Emerge from the center if i is less than kF (key frame)
-            if (i++ < kF) p = c (normalizeEm (i / n)) * (kF - 1) / n;
-
-            // Apply exponential transformation to p to cover the remaining precentage left to travel
-            else {
-                p = e (normalize (i / n));
-
-                // Begin the glowing and radiating animation if done traveling
-                if (i >= n) {
-                    if (tweeningToGlow) {
-                        tw.step ();
-                        if (tw.done ()) tweeningToGlow = false;
-                    } else tw.undo ();
-
-                    // Tick the radiating edge because the section is done traveling
-                    radiator.tick ();
-                }
-            }
-
-            // Normalization of percentage values that fall in [0, (kF - 1) / n]
-            function normalizeEm (z) {console.log ('emP: ' + (z / (kF - 1))); return z / (kF - 1);}
-
-            // Normalization of percentage values that fall in [k, 1]
-            function normalize (z) {console.log ('p: ' + ((z - k) / (1 - k))); if (z > 1) z = 1; return (z - k) / (1 - k);}
-        
-            // Normalize z between the domain [a, b]
-            function norm (z, a) {return (z - a) / (b - a)}
-        };
-
-        // Draws the current state of this TravelingSection to the canvas centered at the point (x, y)
-        this.draw = function (x, y) {
-            //draw (p, tw.color (), t0, t1, x, y);
-            var rSmall = (r0 * r0x) - (r0 * (1 - p));
-            if (rSmall < 0) rSmall = 0;
-            draw (p * r0, rSmall, tw.color (), t0, t1, x, y);
-            if (i >= n) radiator.draw (x, y);
-            return this;
-        };
-
-        // Returns the values that will be assigned to pDone
-        this.pValue = function () {return t1 / TAU * 100;};
     }
-
-    /**
-     * Handles the little radiating section that is given off when a traveling section hits the wall of the containing donut
-     *
-     * Arguments:
-     *     opts - {opts0: val0, ...}: options for setting the internal properties of this RadiatingSection
-     *       theta0                       - [0, TAU]: starting bound of the radiating section
-     *       theta1                       - [0, TAU]: ending bound of the radiating section
-     *       numRadiatingFrames           - [0, inf): the number of frames to animate the radiation
-     *       radialPercentage             - [0, inf): how far to extend the radiating section as a percentage of the radius
-     *       radiatingThicknessPercentage - [0, 1 / (1 - r0x)]: percentage of thickness of the loading icon outer wall to make the radiating section
-     *       radiatingThicknessEasing     - function with domain [0, 1]: easing for thickness across different ticks of animation time
-     */
-    function RadiatingSection (opts) {
-        var t0 = opts.theta0 || 0,
-            t1 = opts.theta1 || TAU,
-            n = opts.numRadiatingFrames || 20,
-            extP = opts.radialPercentage || 1.125,
-            th = opts.radiatingThicknessPercentage || 0.125,
-            eFunc = opts.radiatingThicknessEasing || function (z) {return z;},
-            i = 0
-            p = 0
-            pT = th;
-
-        // Returns whether the section is finished radiating or not
-        this.done = function () {return i >= n;};
-
-        // Ticks the current state of the radiating section forward one unit in animation time
-        this.tick = function () {p = 1 + d (i++ / n) * extP; pT = eFunc ((i - 1) / n) * th; return this;};
-
-        // Draws the radiating section to the canvas
-        this.draw = function (x, y) {draw (p, lColor, t0, t1, x, y, pT); return this;};
-    }
-
-    this.sections = function () {return sects;};
-
-    // Returns x mod y like in Python
-    function mod (x, y) {return x < 0? y - (-x % y) : x % y;}
-
-    /* Percentage transformation functions for a more professional feel */
-    // Cosine transformation for the emerging animation
-    function c (z) {return (1 - Math.cos(Math.PI * z)) / 2;}
-
-    // Exponential growth transformation for the traveling animation
-    function e (z) {var b = 5, j = 4; return (Math.pow(b, j * z - j) - Math.pow(b, -j)) / (1 - Math.pow(b, -j));}
-
-    // Exponential decay transformation for the radiating animation
-    function d (z) {return p > 1? 1 : -e (z) + 1;}
-
-    // Converts a [0, 100] percentage to its percent TAU radian value
-    function pToR (percentage) {return TAU * percentage / 100;}
-
-    // Draws a donut section from the starting radian to the ending radian to specifiaction
-    /*function draw (percentRadius, color, theta0, theta1, x, y, percentThickness) {
-        if (arguments.length === 6) percentThickness = 1;
-        function ad (pr) {return pr > 1 / (1 - pr)? 1 / (1 - pr) : pr < 0? 0 : pr;}
-        var R = percentRadius * r0, r1 = R * (1 - ad (percentThickness) * (1 - r0x));
-
-        ctx.fillStyle = color;
-        ctx.beginPath ();
-
-        // Draws the longest arc with percentRadius * r0 radius length
-        ctx.arc (x, y, R, theta0, theta1, false);
-
-        // Draws the smaller closing arc at the thickness percentage specified
-        ctx.arc (x, y, r1, theta1, theta0, true);
-
-        // Fills in the newly formed path
-        ctx.fill ();
-    }*/
 
     function draw (bigR, littleR, color, theta0, theta1, x, y) {
         ctx.fillStyle = color;
         ctx.beginPath ();
-
-        // Draws the longest arc first
         ctx.arc (x, y, bigR, theta0, theta1, false);
-
-        // Draws the smaller arc second
         ctx.arc (x, y, littleR, theta1, theta0, true);
-
-        // Fills in the newly formed path
         ctx.fill ();
     }
+
+    function pToR (percentage) {return TAU * percentage / 100;}
+
+    function mod (x, y) {return x < 0? y - (-x % y) : x % y;}
 }
 
 /**
@@ -401,11 +210,11 @@ function LoadingIcon (canvas, opt) {
  */
 function ColorTweener (rgb0, rgb1, nSteps) {
 
-    var sRGB = parse (rgb0), cRGB = sRGB, eLab = rgbToLab (parse (rgb1)), n = nSteps, i = 1;
+    var cRGB = parse (rgb0), sLab = rgbToLab (cRGB), eLab = rgbToLab (parse (rgb1)), n = nSteps, i = 0;
 
     // Marks whether the color was completely faded through the first time
     this.done = function () {
-        return i === (n + 1);
+        return i >= (n + 1);
     };
 
     // Returns whether the animation is at the starting point or not
@@ -423,7 +232,7 @@ function ColorTweener (rgb0, rgb1, nSteps) {
 
     this.undo = function () {
         if (i > n) i = n;
-        if (--i >= 0) cRGB = labToRGB (interpolate (rgbToLab (cRGB), eLab, i / n));
+        if (i-- >= 0) cRGB = labToRGB (interpolate (rgbToLab (cRGB), sLab, i / n));
 
         return this;
     };
@@ -528,63 +337,3 @@ function ColorTweener (rgb0, rgb1, nSteps) {
         return 'rgb(' + Math.floor (cRGB[0]) + ', ' + Math.floor (cRGB[1]) + ', ' + Math.floor (cRGB[2]) + ')';
     };
 }
-
-function SimpleLoadingIcon (canvas, opt) {
-    if (arguments.length === 1) opt = {};
-    var TAU = 2 * Math.PI,
-        can = canvas,
-        ctx = canvas.getContext ('2d'),
-        r0 = opt.radius || 0.35 * Math.min(can.width, can.height),
-        r0x = opt.pRWidth || 1 - 0.125,
-        oColor = opt.outerColor || 'rgb(200, 200, 200)',
-        lColor = opt.loadColor || 'rgb(0, 153, 0)',
-        gColor = opt.glowColor || 'rgb(128, 255, 0)',
-        rot = opt.radianDisplacement || -TAU / 4;
-
-    var pPrev = 0, pCurr = 0, pDone = 0;
-
-    this.draw = function (x, y) {
-        if (arguments.length === 1) y = can.height / 2;
-        else if (arguments.length === 0) {x = can.width / 2; y = can.height / 2;}
-
-        ctx.clearRect (0, 0, can.width, can.height);
-
-        draw (r0, r0 * r0x, oColor, 0, TAU, x, y);
-
-        draw (r0, r0 * r0x, lColor, mod (rot, TAU), mod (pToR (pDone) + rot, TAU), x, y);
-
-        draw (r0 * (1 - r0x), 0, oColor, 0, TAU, x, y);
-
-        ctx.font = '' + Math.round(0.75 * r0 * (1 - r0x)) + 'px Tahoma';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = lColor;
-        ctx.fillText (Math.floor(pCurr), x, y);
-
-        return this;
-    };
-
-    this.tick = function (quantity) {
-        if (arguments.length === 1) {
-            pPrev = pCurr;
-            pCurr += Math.abs(+quantity);
-            if (pCurr > 100) pCurr = 100;
-            pDone = pCurr;
-        }
-
-        return this;
-    };
-
-    function draw (bigR, littleR, color, theta0, theta1, x, y) {
-        ctx.fillStyle = color;
-        ctx.beginPath ();
-        ctx.arc (x, y, bigR, theta0, theta1, false);
-        ctx.arc (x, y, littleR, theta1, theta0, true);
-        ctx.fill ();
-    }
-
-    function pToR (percentage) {return TAU * percentage / 100;}
-
-    function mod (x, y) {return x < 0? y - (-x % y) : x % y;}
-}
-

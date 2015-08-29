@@ -159,6 +159,7 @@ ready (function () {
                 $documentationdiv.append ('<div id="documentationtabdiv"></div>');
                 $documentationtabdiv = $('#documentationtabdiv');
                 $documentationtabdiv.css ({height: $documentationdiv.outerHeight(true) - $availablehead.outerHeight(true)});
+                $documentationtabdiv.append ();
             } 
 
             // Build the mobile version of the site otherwise

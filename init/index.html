@@ -1,26 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>A Server Home</title>
+		<title>server/init</title>
+		<meta name="viewport" content="initial-scale=1, user-scalable=no"/>
 		<link rel="stylesheet" href="css/jquery.mCustomScrollbar.min.css"/>
 		<style>
+			#availablediv {
+				background-color: magenta;
+				margin: 0;
+				position: fixed;
+				right: 0;
+				top: 8em;
+				z-index: -1;
+			}
+
+			#availablehead {
+				background-color: #DDD;
+				box-shadow: 0 5px 5px #888;
+				-webkit-box-shadow: 0 5px 5px #888;
+				-moz-box-shadow: 0 5px 5px #888;
+				-o-box-shadow: 0 5px 5px #888;
+				-ms-box-shadow: 0 5px 5px #888;
+				cursor: default;
+				font-family: 'Open Sans', 'Century Gothic', sans-serif;
+				height: 5em;
+				margin: 0;
+				position: fixed;
+				text-align: center;
+				top: 0;
+				width: 50%;
+				z-index: 0;
+			}
+
+			#availableheadtitle {
+				display: block;
+				margin: 0 auto;
+			}
+
+			#clock {
+				bottom: 0;
+				color: white;
+				font-family: 'Consolas', 'Courier New', monospace;
+				line-height: 3em;
+				margin: 0 1em 0 0;
+				padding: 0;
+				position: absolute;
+				right: 0;
+				text-shadow: 1px 0 1px #555;
+			}
+
+			#documentationdiv {
+				background-color: #DDD;
+				border-right: 1px solid #666;
+				left: 0;
+				margin: 0;
+				position: fixed;
+				top: 3em;
+				z-index: 1;
+			}
+
+			#documentationhead {
+				box-shadow: 0 5px 5px #888;
+				-webkit-box-shadow: 0 5px 5px #888;
+				-moz-box-shadow: 0 5px 5px #888;
+				-o-box-shadow: 0 5px 5px #888;
+				-ms-box-shadow: 0 5px 5px #888;
+				cursor: default;
+				font-family: 'Open Sans', 'Century Gothic', sans-serif;
+				height: 5em;
+				position: fixed;
+				text-align: center;
+				width: 50%;
+				z-index: 2;
+			}
+
+			#documentationtabdiv {
+				background-color: cyan;
+				position: absolute;
+				top: 5em;
+				width: 100%;
+				z-index: 1;
+			}
+
+			#documentationtitle {
+				margin: 0;
+				padding: 0;
+			}
+
+			#headerdiv {
+				background: linear-gradient(0deg, #CCC, #FFF);
+				cursor: default;
+				height: 3em;
+				left: 0;
+				position: fixed;
+				top: 0;
+				user-select: none;
+				-moz-user-select: none;
+				-webkit-user-select: none;
+				-o-user-select: none;
+				-ms-user-select: none;
+				width: 100%;
+			}
+
+			#logosvg {
+				left: 0;
+				margin: 0;
+				max-height: 100%;
+				max-width: 100%;
+				padding: 0;
+				position: absolute;
+				top: 0;
+				zoom: 2;
+			}
+
+			.mobilecontentdiv {
+				background-color: green;
+				position: absolute;
+				width: 100%;
+			}
+
+			.staticentry {
+				background-color: #FFF;
+				box-sizing: border-box;
+				-moz-box-sizing: border-box;
+				-webkit-box-sizing: border-box;
+				-o-box-sizing: border-box;
+				-ms-box-sizing: border-box;
+				cursor: pointer;
+				display: table;
+				height: 3em;
+				margin: 0;
+				padding-left: 1em;
+				vertical-align: middle;
+				width: 100%;
+			}
+
+			.staticentry p {
+				font-family: 'Open Sans', 'Courier New', monospace, sans-serif;
+				font-size: 1.5em;
+				line-height: 3em;
+				margin: 0;
+				padding: 0;
+			}
+
+			/* Beautiful font for a professional feel */
 			@font-face {
-			  font-family: 'Open Sans';
-			  font-style: normal;
-			  font-weight: 300;
-			  src: local('Open Sans Light'), local('OpenSans-Light'), url(css/OpenSans.woff2) format('woff2');
-			  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+				font-family: 'Open Sans';
+				font-style: normal;
+				font-weight: 300;
+				src: local('Open Sans Light'), local('OpenSans-Light'), url(css/OpenSans.woff2) format('woff2');
+				unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
 			}
 		</style>
 	</head>
 	<body style="width: 100%; height: 100%; margin: 0; padding: 0;">
-	<canvas id="loading" style="margin: 0; padding: 0; display: block;">Go download a real browser.</canvas>
+	<canvas id="loading" style="margin: 0; padding: 0; display: none;">Go download a real browser.</canvas>
 		
-	<!-- Adding all script files and libraries at the end of the document -->
-	<!-- <script src="js/jquery-2.1.4.min.js"></script>
-	<script src="/js/jquery-color.min.js"></script>
-	<script src="/js/jquery.mCustomScrollbar.concat.min.js"></script>
-	<script src="/js/keypress-2.1.0.min.js"></script> -->
+	<!-- Allows for div resize event firing. Credit to Marc J. Schmidt; scr url = http://marcj.github.io/css-element-queries/ -->
+	<script src="js/ResizeSensor.js"></script>
+	<script src="js/ElementQueries.js"></script>
+
+	<!-- Handles creation of the loading icon and AJAX calls to load jQuery and all other dependencies to make the page dynamic -->
 	<script src="js/l.js"></script>
+	<script src="js/init.js"></script>
 	</body>
 </html>

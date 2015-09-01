@@ -48,9 +48,10 @@ if (debug) $('Additional command line arguments: ' + (process.argv.length - 2));
  ***********************************************************************************************************************/
 /* Function from which all other callbacks execute */
 function fHTTP (rq, rs) {
-    var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress;
+    var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress,
+        sRgx = /^(\/init)?\/static.directory/;
     $n('\n*** ' + fN (fHTTP) + 'Incoming request heard! Initializing response for ' + IP + ' ***');
-    rq.method === 'GET'? rq.url === '/static.directory'? dirCont (rq, rs, IP) : GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
+    rq.method === 'GET'? rq.url.match (sRgx)? dirCont (rq, rs, IP) : GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
 }
 
 /* Root function of the POST request handling function tree */
@@ -215,15 +216,22 @@ function DirSpace () {
 
     // Attempts to match the raw URL directly from the request with a directory found in 
     this.match = function (rURL, IP) {
-        var def = ['/404', '/index.html'], rx = /\/[^/]+/g;
+        var def = ['/404', '/index.html'], rx = /\/[^/]+/g, st = /^\/static/;
 
-        var url = sDecodeURL (rURL), aURL = mrg (url, IP), 
-            sgs0 = url.match (rx) || def, sgs1 = aURL.match (rx) || def,
-            top0 = sgs0[0], top1 = sgs1[0], dps0 = root[top0] || [], dps1 = root[top1] || [], idxStr = url + def[1], i;
+        var url = sDecodeURL (rURL), aURL = mrg (url, IP), iURL = url.match (st)? url.replace (st, '/init') : '/init' + url,
+            sgs0 = url.match (rx) || def, sgs1 = aURL.match (rx) || def, sgs2 = iURL.match (rx) || def,
+            top0 = sgs0[0], top1 = sgs1[0], top2 = sgs2[0],
+            dps0 = root[top0] || [], dps1 = root[top1] || [], dps2 = root[top2] || [],
+            xURL = url + def[1], i;
 
-        $dvnt(IP + ') - d.match');
-        $dnt('rURL: '+rURL,'url: '+url,'aURL: '+aURL,'idxStr: '+idxStr,'sgs0: '+sgs0,'sgs1: '+sgs1,'dps0 ->'+dps0,'dps1 ->'+dps1);
-        $dnt('1: '+bS (dps0, url), '2: '+bS (dps1, aURL), '3: '+bS (dps0, idxStr), '4: '+dps0.length, '5: '+errorMatch (url, IP));
+        // Save the computationally expensiveness even though the print statements won't do anything with the flag not set
+        if (debug) {
+            $dvnt(IP + ') - d.match');
+            $dnt('rURL: '+rURL,'url: '+url,'aURL: '+aURL,'xURL: '+xURL,'iURL: '+iURL,'sgs0: '+sgs0,'sgs1: '+sgs1,'sgs2: '+sgs2);
+            $dvnt('dps0/dps1: ' + dps0, 'dps2: ' + dps2);
+            $dnt('1: '+bS (dps0, url), '2: '+bS (dps1, aURL), '3: '+bS (dps0, xURL), '4: '+dps0.length, '5: '+bS (dps2, iURL),
+                 '6: '+errorMatch (url, IP));
+        }
 
         // The user agent requested a perfect path to the file
         if ((i = bS (dps0, url)) !== false) return map (dps0[i], IP, 200);
@@ -232,7 +240,10 @@ function DirSpace () {
         else if ((i = bS (dps1, aURL)) !== false) return [dps1[i], 200];
 
         // The user agent lazily typed the request, and it matches a valid path to an index.html file
-        else if ((i = bS (dps0, idxStr)) !== false) return map (dps0[i], IP, 200);
+        else if ((i = bS (dps0, xURL)) !== false) return map (dps0[i], IP, 200);
+
+        // The user agent is on the homepage, and is trying to load some dependency
+        else if ((i = bS (dps2, iURL)) !== false) return map (dps2[i], IP, 200);
 
         // The user agent lazily typed the request, and it might match a valid path to an html file
         else if (dps0.length) {for (i = 0; i < dps0.length; i++) if (dps0[i].match (/\\.html$/)) return map (dps0[i], IP, 200);}
@@ -275,8 +286,8 @@ function MIMEType (file) {
 
 /* Quietly attaches the "/static" directory to non-"/404" and non-"/init" queries and returns the string literal of request.url */
 function sDecodeURL (url) {
-    var i = '/index.html', f = '/favicon.ico', deps = '/dependencies', s = '/static';
-    return decodeURL (url === '/' || url === i? '/init' + i : url === f? deps + f : url.match (/^\/404|^\/init/)? url : s + url);
+    var i = '/index.html', f = '/favicon.ico', deps = '/dependencies', s = '/static', u = url.replace (/\/$/, '');
+    return decodeURL (url === '/' || u === i? '/init' + i : u === f? deps + f : u.match (/^\/404|^\/init/)? u : s + u);
 }
 
 /* Returns the string literal of the encoded request.url */

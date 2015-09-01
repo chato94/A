@@ -97,7 +97,15 @@ ready (function () {
 
         // Builds the website using jQuery. This function assumes that staticWebsites has been determined
         function buildBody () {
-            var $body = $('body');
+            var $body = $('body'), 
+                scrollbarOpts = {
+                    theme: 'minimal-dark', 
+                    scrollInertia: 256, 
+                    advanced: {
+                        updateOnContentResize: true, 
+                        updateOnBrowserResize: true
+                    }
+                };
 
             // Add the div that will contain the title and the time at the top
             $body.append ('<div id="headerdiv"><img src="css/logo.svg" alt="a server" id="logosvg"/></div>');
@@ -133,9 +141,9 @@ ready (function () {
                 if (staticWebsites['static'] === 'ERR') {
                     $availablediv.append ('<div class="staticentry"><p>Unexpected error prevented static folder retrieval</p></div>');
                 } else if (staticWebsites.length) {
-                    for (var i = 0; i < staticWebsites.length; i++) $availablediv.append ('<div class="staticentry"><p>' + staticWebsites[i] + '</p></div>');
+                    for (var i = 0; i < staticWebsites.length; i++) $availablediv.append ('<div class="staticentry"><a href="../' + staticWebsites[i] + '">' + staticWebsites[i] + '</a></div>');
                     $staticentry = $('.staticentry');
-                    $availablediv.mCustomScrollbar ({theme: 'minimal-dark', scrollInertia: 256, advanced: {updateOnContentResize: true, updateOnBrowserResize: true}});
+                    $availablediv.mCustomScrollbar (scrollbarOpts);
 
                     // Cache the hovering colors
                     var defColor = '#FFF', hovColor = '#AAA', m = 200;
@@ -159,7 +167,21 @@ ready (function () {
                 $documentationdiv.append ('<div id="documentationtabdiv"></div>');
                 $documentationtabdiv = $('#documentationtabdiv');
                 $documentationtabdiv.css ({height: $documentationdiv.outerHeight(true) - $availablehead.outerHeight(true)});
-                $documentationtabdiv.append ();
+
+                // Continue adding the rest of the documentation tab based on the content in the blog
+                ajaxText ('blog/blog.json', function (text) {
+                    try {
+                        var webObj = JSON.parse (text);
+                        $documentationtabdiv.append (webObj.blog.join ('')).mCustomScrollbar (scrollbarOpts);
+                        console.log ('blog: ' + webObj.blog + '\ndocumentation: ' + webObj.documentation);
+                    } catch (e) {
+                        alert ('There was an error parsing the text in blog/blog.json. Contact your local administrator and let them know of this error.')
+                        console.log (e.stack);
+                    }
+                }, function (status) {
+                    alert ('The blog/blog.json file is missing. Contact your local administrator and let them know of this error.');
+                    console.log ('Error status: ' + status);
+                });
             } 
 
             // Build the mobile version of the site otherwise
@@ -289,10 +311,10 @@ ready (function () {
 
                 /** Load JavaScript libraries that depend on successful jQuery load **/
                 // Load jQuery Color
-                ajax ('jQueryColor', 'init/js/jquery-color.min.js');
+                ajaxJS ('jQueryColor', 'js/jquery-color.min.js');
 
                 // Load mCustomScrollbar
-                ajax ('mCustomScrollbar', 'init/js/jquery.mCustomScrollbar.concat.min.js');
+                ajaxJS ('mCustomScrollbar', 'js/jquery.mCustomScrollbar.concat.min.js');
 
             } else {
                 deps.jQuery = request.status;
@@ -302,14 +324,15 @@ ready (function () {
     };
 
     // Send the request to the server
-    request.open ('GET', 'init/js/jquery-2.1.4.min.js', ASYNC);
+    request.open ('GET', 'js/jquery-2.1.4.min.js', ASYNC);
     request.send ();
 })();
 
 // Load KeyPress
-ajax ('keyPress', 'init/js/keypress-2.1.0.min.js');
+ajaxJS ('keyPress', 'js/keypress-2.1.0.min.js');
 
-function ajax (dps, url) {
+// Asynchronously loads a JavaScript dependency using the native eval()
+function ajaxJS (dps, url) {
     var req = new window.XMLHttpRequest (), ASYNC = true;
     req.onreadystatechange = function () {
         if (req.readyState === 4) {
@@ -325,4 +348,76 @@ function ajax (dps, url) {
 
     req.open ('GET', url, ASYNC);
     req.send ();
+}
+
+// Asynchronously loads a text file and executes the appropriate callback
+function ajaxText (url, sCB, eCB) {
+    var req = new window.XMLHttpRequest (), ASYNC = true;
+    req.onreadystatechange = function () {
+        if (req.readyState === 4) req.status === 200? sCB (req.responseText) : eCB (req.status);
+    };
+
+    req.open ('GET', url, ASYNC);
+    req.send ();
+}
+
+Array.prototype.toString = function () {
+    var s = '', n = '\n    ';
+    for (var i = 0, t = this; i < t.length; i++) s += i > 0? ',' + n + t[i] : n + t[0];
+    return '[' + s + '\n]';
+};
+
+function printHTMLArray (arr, i, ind, s) {
+    if (arguments.length === 1) {i = 0; ind = 0; s = '';}
+
+    var prevWasOpening = false, prevWasClosing = false, tab = '    ', n = '\n';
+    if (i < arr.length) {
+
+        // Matches opening HTML tags
+        if (arr[i].match (/^<[^/]/)) {
+            prevWasClosing = false;
+
+            // Two consecutive opening tags indicates recursive tab adjustment
+            if (prevWasOpening) {
+                s += _(tab, ind) + arr[i] + n;
+                return printHTMLArray (arr, i + 1, ind + 1, s);
+            }
+
+            // This is the first opening tag, or first opening tag after a closing tag
+            else {
+                prevWasOpening = true;
+                s += _(tab, ind) + arr[i] + n;
+                return printHTMLArray (arr, i + 1, ind, s);
+            }
+        }
+
+        // Matches closing HTML tags
+        else if (arr[i].match (/^<\//)) {
+            prevWasOpening = false;
+
+            // Two consecutive closing tags indicates recursive tab adjustment
+            if (prevWasClosing) {
+                s += _(tab, ind) + arr[i] + n;
+                return printHTMLArray (arr, i + 1, ind - 1, s);
+            }
+
+            // This is a first closing tag that came after an opening tag
+            else {
+                prevWasClosing = true;
+                s += _(tab, ind) + arr[i] + n;
+                return printHTMLArray (arr, i + 1, ind, s);
+            }
+        }
+
+        // Work with everything else
+        else s += _(tab, ind) + arr[i] + n;
+    }
+
+    function _ (str, t) {
+        var __ = '';
+        for (var ___ = 0; ___ < t; ___++) __ += str;
+        return __;
+    }
+
+    return s;
 }

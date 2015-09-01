@@ -34,7 +34,17 @@
 
 			#availableheadtitle {
 				display: block;
-				margin: 0 auto;
+				margin: 1em auto;
+			}
+
+			.blogcard {
+				background-color: #FFF;
+				border-radius: 0.5em;
+				font-family: 'Open Sans', 'Century Gothic', sans-serif;
+				margin: 1em auto;
+				padding: 1em;
+				text-decoration: none;
+				width: 90%;
 			}
 
 			#clock {
@@ -75,7 +85,7 @@
 			}
 
 			#documentationtabdiv {
-				background-color: cyan;
+				/*background-color: cyan;*/
 				position: absolute;
 				top: 5em;
 				width: 100%;
@@ -148,8 +158,7 @@
 				font-family: 'Open Sans';
 				font-style: normal;
 				font-weight: 300;
-				src: local('Open Sans Light'), local('OpenSans-Light'), url(css/OpenSans.woff2) format('woff2');
-				unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+				src: url(css/OpenSans.woff2) format('woff2'), local('Open Sans Light'), local('OpenSans-Light');
 			}
 		</style>
 	</head>
@@ -160,7 +169,7 @@
 	<script src="js/ResizeSensor.js"></script>
 	<script src="js/ElementQueries.js"></script>
 
-	<!-- Handles creation of the loading icon and AJAX calls to load jQuery and all other dependencies to make the page dynamic -->
+	<!-- Handles creation of the loading icon and AJAX calls to load jQuery and all other dependencies to make a dynamic page -->
 	<script src="js/l.js"></script>
 	<script src="js/init.js"></script>
 	</body>

@@ -69,7 +69,7 @@ ready (function () {
         $staticentry,
         $headerdiv;
 
-    // Updates the time of the clock every 0.5 seconds only if the clock and jQuery are present in the DOM
+    // Updates the time of the clock every 1.5 seconds only if the clock and jQuery are present in the DOM
     function keepTime () {
         $clock.html (clock.tick ().time ());
         setTimeout (keepTime, 1500);
@@ -141,7 +141,7 @@ ready (function () {
                 if (staticWebsites['static'] === 'ERR') {
                     $availablediv.append ('<div class="staticentry"><p>Unexpected error prevented static folder retrieval</p></div>');
                 } else if (staticWebsites.length) {
-                    for (var i = 0; i < staticWebsites.length; i++) $availablediv.append ('<div class="staticentry"><a href="../' + staticWebsites[i] + '">' + staticWebsites[i] + '</a></div>');
+                    for (var i = 0; i < staticWebsites.length; i++) $availablediv.append ('<a target="_blank" href="../' + staticWebsites[i] + '" class="staticentry">' + staticWebsites[i] + '</a>');
                     $staticentry = $('.staticentry');
                     $availablediv.mCustomScrollbar (scrollbarOpts);
 
@@ -168,20 +168,42 @@ ready (function () {
                 $documentationtabdiv = $('#documentationtabdiv');
                 $documentationtabdiv.css ({height: $documentationdiv.outerHeight(true) - $availablehead.outerHeight(true)});
 
-                // Continue adding the rest of the documentation tab based on the content in the blog
-                ajaxText ('blog/blog.json', function (text) {
-                    try {
-                        var webObj = JSON.parse (text);
-                        $documentationtabdiv.append (webObj.blog.join ('')).mCustomScrollbar (scrollbarOpts);
-                        console.log ('blog: ' + webObj.blog + '\ndocumentation: ' + webObj.documentation);
-                    } catch (e) {
-                        alert ('There was an error parsing the text in blog/blog.json. Contact your local administrator and let them know of this error.')
-                        console.log (e.stack);
+                // Get the A Server Github HTML and CSS and add it as the first documentation card
+                ajaxText ('/request.crossdomain.https://github.com/tacowhisperer/A', function (text) {
+                    ajaxText ('/request.crossdomain.https://assets-cdn.github.com/assets/' +
+                        'github2-0f9ba210819ce56d9f786431efa5742ecacb9ea2d491b3b2a1c191626fd447e7.css', function (txt) {
+                            // Handles the case where both the CSS and HTML were successfully loaded
+                            $body.append('<style>' + txt + '</style>');
+                            _next ();
+                        }, _next);
+
+                    function _next () {
+                        $documentationtabdiv.append ('<div class="blogcard"><p class="blogtext">The following is pulled from <a href="https://github.com/tacowhisperer/A" target="_blank">https://github.com/tacowhisperer/A</a></p>' + text.match (/<div id="readme"(.|\n)+<article(.|\n)+<\/article>(.|\n)+?<\/div>/)[0] + '</div>');
+                        _appendBlog ();
                     }
                 }, function (status) {
-                    alert ('The blog/blog.json file is missing. Contact your local administrator and let them know of this error.');
-                    console.log ('Error status: ' + status);
+                    $documentationtabdiv.append ('<div class="blogcard"><p class="blogtext">Could not retrieve the documentation directly from'+
+                        ' the Github server. Please click <a href="https://github.com/tacowhisperer/A" target="_blank" style="text-decoration: none;">here</a>'+
+                        ' to see the documentatoin readme directly.</p></div>');
+                    _appendBlog ();
                 });
+
+                function _appendBlog () {
+                    ajaxText ('blog/blog.json', function (text) {
+                        try {
+                            var webObj = JSON.parse (text);
+                            $documentationtabdiv.append (webObj.blog.join (''));
+                        } catch (e) {
+                            alert ('There was an error parsing the text in blog/blog.json. Contact your local administrator and let him or her know of this error.');
+                            console.log (e.stack || e);
+                        }
+                        $documentationtabdiv.mCustomScrollbar (scrollbarOpts);
+                    }, function (status) {
+                        alert ('The blog/blog.json file is missing or corrupted. Contact your local administrator and let them know of this error.');
+                        console.log ('error status: ' + status);
+                        $documentationtabdiv.mCustomScrollbar (scrollbarOpts);
+                    });
+                }
             } 
 
             // Build the mobile version of the site otherwise
@@ -200,6 +222,8 @@ ready (function () {
                 var delta = $headerdiv.outerHeight(true) + $availablediv.outerHeight(true);
                 $mobilecontentdiv.css ({height: (window.innerHeight - delta) + 'px', top: delta + 'px'});
             }
+
+            loadingIcon.tick (15).draw ();
         }
 
         /*global jQuery
@@ -263,7 +287,9 @@ ready (function () {
 
     // Fades away the loading icon and fades in the contents of the homepage
     function animateEntrance () {
-
+        $('#loading').fadeOut (200, function () {
+            $('#loadingcover').fadeOut (200);
+        });
     }
 
     // Simple clock object that returns the time in AM/PM format when ticked    

@@ -104,9 +104,9 @@ function SimpleLoadingIcon (canvas, opt) {
         oColor = opt.outerColor || 'rgb(220, 220, 220)',
         lColor = opt.loadColor || 'rgb(0, 153, 0)',
         gColor = opt.glowColor || 'rgb(128, 255, 0)',
-        twF = 50,
-        tw0 = new ColorTweener (lColor, gColor, 2),
-        tw1 = new ColorTweener (gColor, lColor, 20 * twF),
+        twF = 35,
+        tw0 = new ColorTweener (lColor, gColor, twF),
+        tw1 = new ColorTweener (gColor, lColor, twF),
         twC = tw0;
         rot = opt.radianDisplacement || -TAU / 4,
         rRP = opt.radiatingRadiusPercentage || 0.5,

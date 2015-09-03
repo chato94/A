@@ -1,7 +1,7 @@
 /*********************************************************************************************
  * THE FOLLOWING ARE REQUIRED Node.js LIBRARIES AND GLOBAL VARIABLES FOR STATIC FILE SERVING *
  *********************************************************************************************/
-var http = require ('http'), fs = require ('fs'), path = require ('path'), cp = require ('child_process'),
+var http = require('http'), fs = require('fs'), path = require('path'), cp = require('child_process'), rqLib = require('request'),
     Int = require ('os').networkInterfaces (), CL_IP = 'x-forwarded-for', S_IP = localIPAddress (),
     PORT = 80, BACKLOG = 511, L = '127.0.0.1', Z = '0.0.0.0', verbose = false, debug = false, server;
 
@@ -41,7 +41,7 @@ for (var i = 2; i < args.length; i++) {
     else dMssg? $(uA + (i+1) + ': "' + args[i] + '"'):(function(){$(aMssg); dMssg = 1; $(uA + (i+1) + ': "' + args[i] + '"');})();
 }
 
-if (debug) $('Additional command line arguments: ' + (process.argv.length - 2));
+if (debug) $('Number of command line arguments fed to the static server: ' + (process.argv.length - 2));
 
 /***********************************************************************************************************************
  * THE FOLLOWING FUNCTIONS ARE THE TREE-LIKE FLOW OF CALLBACKS THAT STEM FROM CLIENT REQUESTS FOR THE SERVER TO HANDLE *
@@ -49,9 +49,55 @@ if (debug) $('Additional command line arguments: ' + (process.argv.length - 2));
 /* Function from which all other callbacks execute */
 function fHTTP (rq, rs) {
     var IP = rq.headers[CL_IP] || rq.connection.remoteAddress || rq.socket.remoteAddress || rq.connection.socket.remoteAddress,
-        sRgx = /^(\/init)?\/static.directory/;
+        sRgx = /^(\/init)?\/static.directory/, 
+        cRgx = /^\/request\.crossdomain\.(https?|ftp|ssh|telnet|smtp|dns|dhcp|finger|pop3|sftp|nntp|ntp|imap3?):\/\/.+\..+$/i;
     $n('\n*** ' + fN (fHTTP) + 'Incoming request heard! Initializing response for ' + IP + ' ***');
-    rq.method === 'GET'? rq.url.match (sRgx)? dirCont (rq, rs, IP) : GETHandler (rq, rs, IP) : POSTHandler (rq, rs, IP);
+
+    // Handle incoming GET requests
+    if (rq.method === 'GET') {
+        // The user agent is requesting the list of all available static websites found in /static
+        if (rq.url.match (sRgx)) dirCont (rq, rs, IP);
+
+        // The user agent is requesting HTML from a website not found on this server
+        else if (rq.url.match (cRgx)) crossRequestHandler (rq, rs, IP);
+
+        // The user is requesting something from the /init, /static, or /404 directories
+        else GETHandler (rq, rs, IP);
+    } 
+
+    // Handle incoming POST requests
+    else if (rq.method === 'POST') {
+        POSTHandler (rq, rs, IP);
+    }
+
+    // Respond with a 501 to all other requests as they are not implemented yet
+    else respondTo (rq, rs, IP, '<h3>' + rq.method + ' requests are not supported at this time.</h3>', 501, 'text/html')
+}
+
+/* Attempts to scrape the HTML from the cross-domain URL using the request npm library */
+function crossRequestHandler (request, response, IP) {
+    var url = request.url.match (/\.[^c].+$/)[0].replace (/^\./, '');
+    $nt(IP + ') Detected a cross-domain GET request! Obtained the requested URL from the GET url.');
+    $dnt(IP + ') request.url: ' + request.url, IP + ') url: ' + url);
+
+    rqLib (url, function (err, res, body) {
+        // Respond with the 500 error if err occurs (res.statusCode if available)
+        if (err) {
+            $dnt(IP + ') An error occurred attempting to make a cross-domain GET request');
+            $dvnt('Error: ' + err);
+
+            respondTo (request, response, IP, body || '<h3>An error occurred</h3>', (res && res.statusCode) || 500, 
+                (body && res && res.headers && res.headers['content-type']) || 'text/html');
+        }
+
+        // Respond with the scraped content otherwise
+        else {
+            $nt(IP + ') Cross-domain request went through as expected.');
+
+            respondTo (request, response, IP, body, (res && res.statusCode) || 200, 
+                (res && res.headers && res.headers['content-type']) || 'text/html');
+        }
+    });
 }
 
 /* Root function of the POST request handling function tree */

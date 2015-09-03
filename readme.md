@@ -28,15 +28,19 @@ These instructions assume that Node.js is already properly installed on the mach
 * Because of the way that the server searches for files, there are potential naming restrictions that must be taken into account. **Even though file storage might not be case sensitive for Windows, the URLs are case sensitive, and must be typed exactly as they are spelled (capitalization and all) in the hard drive.** The following is the hierarchy with which the server attempts to find a file with the URL that a user types after the IP address of the navigation bar of their browser. Use it to avoid any potential conflicts (none have been found to this date, but unit testing has not been conducted in this area):
   1. The server first attempts to perfectly match the URL after the IP address with a path in one of `/static`, `/init`, or `/404` directories. For example, the server would attempt to find `http://192.168.1.11/something/somethingelse/file.extension` exactly at `/static/something/somethingelse/file.extension`. If this fails then...
 
-  2. Attempts to serve a dependency (CSS, JavaScript, etc.) from the last folder that contained a successfully loaded HTML file. For example, this means that if the last successfully loaded HTML file for a user is located at `/static/website` and the user is requesting `/javascript/dependency.js`, the server would search for `/static/website/javascript/dependency.js`. If this fails then...
+  2. The server attempts to serve a dependency (CSS, JavaScript, etc.) from the last folder that contained a successfully loaded HTML file. For example, this means that if the last successfully loaded HTML file for a user is located at `/static/website` and the user is requesting `/javascript/dependency.js`, the server would search for `/static/website/javascript/dependency.js`. If this fails then...
 
-  3. Attempts to serve the requested URL with `/index.html` attached to the end of it. For example, if the user requests `/init/this/path/to/website`, the server searches for `/init/this/path/to/website/index.html`. If this fails then...
+  3. The server attempts to serve the requested URL with `/index.html` attached to the end of it. For example, if the user requests `/init/this/path/to/website`, the server searches for `/init/this/path/to/website/index.html`. If this fails then...
 
-  4. Attempts to serve the requested URL with any sort of HTML file attached to the end of it. Meaning that if, for example, the website is in the `/static/website` directory, and it contains exactly one file called `website.html`, it will serve `/static/website/website.html`. If this fails then...
+  4. The server attempts to serve the requested URL as if it were made from the `/init` page by replacing the inner `/static` component of the URL if it's not already attached, or by prepending `/init` to the URL. If this fails then...
 
-  5. It servers the HTML file and dependencies in the `/404` directory.
+  5. The server attempts to serve the requested URL with any sort of HTML file attached to the end of it. Meaning that if, for example, the website is in the `/static/website` directory, and it contains exactly one file called `website.html`, it will serve `/static/website/website.html`. If this fails then...
+
+  6. It serves the HTML file and dependencies in the `/404` directory.
 
   * If a website folder does not have an HTML file, the server serves the contents in the `/404` directory.
+
+  * **UPDATE: A new restriction has been found for dependencies.** Most of this hierarchy was designed with abstraction for web developers in mind. However, a new conflict has been found where if developers do not link dependencies with the full path starting from the name of their website folder down to the path of the dependency, then a sort of data-race may occur and the website will not load properly because the user agent requested 2 different static web pages in different tabs at the same time. The only fix for this is if the user agent refreshes one page at a time, and then waits until that page is fully loaded to refresh the next page. Unless there exists a way to map these requests, developers should code around this.
 
 * The `index.js` file has support for 2 command line arguments, each separated with a space (or more, but are still counted as one argument)
   * `-v[erbose]`: logs additional information about how each request is being processed to the terminal window
@@ -47,6 +51,8 @@ These instructions assume that Node.js is already properly installed on the mach
 
 * The home page of the static file server (`/init`) makes use of a specially treated GET request url `/static.directory`.
   * When a page or user requests for `/static.directory`, the server will respond with a JSON string with a `"static"` key, and either `"ERR"` as the value if something went wrong with reading the `/static` directory, or with an array `[website1,website2,...,website_n]` of all websites found in the `/static` directory at request time.
+
+* Files from other domains (such as Google) can be loaded through the server as well by using a special GET request url in the format `/request.crossdomain.(URL)` where `(URL)` is any valid link to a requested dependency. This is good for when certain websites do not load their content via an iframe and when browsers block requests to other domains (i.e. this readme loaded in the server homepage in the DOCS AND BLOG section). Note that this can be dangerous, so some type of configuration will be made, and user agents WILL know that content from another domain has been loaded. For now, it's quiet.
 
 * If a file is empty when a user requests it, the server responds with a space (`ASCII dec 32, 0x20`) rather than an empty string or buffer
   * No documentation clarifies whether this is bad code, web standard, or a Node bug, but it is what it is.

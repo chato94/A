@@ -170,6 +170,7 @@ ready (function () {
 
                 // Get the A Server Github HTML and CSS and add it as the first documentation card
                 ajaxText ('/request.crossdomain.https://github.com/tacowhisperer/A', function (text) {
+                    loadingIcon.tick (5).draw ();
                     ajaxText ('/request.crossdomain.https://assets-cdn.github.com/assets/' +
                         'github2-0f9ba210819ce56d9f786431efa5742ecacb9ea2d491b3b2a1c191626fd447e7.css', function (txt) {
                             // Handles the case where both the CSS and HTML were successfully loaded
@@ -179,12 +180,14 @@ ready (function () {
 
                     function _next () {
                         $documentationtabdiv.append ('<div class="blogcard"><p class="blogtext">The following is pulled from <a href="https://github.com/tacowhisperer/A" target="_blank">https://github.com/tacowhisperer/A</a></p>' + text.match (/<div id="readme"(.|\n)+<article(.|\n)+<\/article>(.|\n)+?<\/div>/)[0] + '</div>');
+                        loadingIcon.tick (5).draw ();
                         _appendBlog ();
                     }
                 }, function (status) {
                     $documentationtabdiv.append ('<div class="blogcard"><p class="blogtext">Could not retrieve the documentation directly from'+
                         ' the Github server. Please click <a href="https://github.com/tacowhisperer/A" target="_blank" style="text-decoration: none;">here</a>'+
                         ' to see the documentatoin readme directly.</p></div>');
+                    loadingIcon.tick (10).draw ();
                     _appendBlog ();
                 });
 
@@ -198,10 +201,12 @@ ready (function () {
                             console.log (e.stack || e);
                         }
                         $documentationtabdiv.mCustomScrollbar (scrollbarOpts);
+                        loadingIcon.tick (5).draw ();
                     }, function (status) {
                         alert ('The blog/blog.json file is missing or corrupted. Contact your local administrator and let them know of this error.');
                         console.log ('error status: ' + status);
                         $documentationtabdiv.mCustomScrollbar (scrollbarOpts);
+                        loadingIcon.tick (5).draw ();
                     });
                 }
             } 
@@ -222,8 +227,6 @@ ready (function () {
                 var delta = $headerdiv.outerHeight(true) + $availablediv.outerHeight(true);
                 $mobilecontentdiv.css ({height: (window.innerHeight - delta) + 'px', top: delta + 'px'});
             }
-
-            loadingIcon.tick (15).draw ();
         }
 
         /*global jQuery

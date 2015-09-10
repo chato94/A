@@ -226,19 +226,22 @@ ready (function () {
 
                 var delta = $headerdiv.outerHeight(true) + $availablediv.outerHeight(true);
                 $mobilecontentdiv.css ({height: (window.innerHeight - delta) + 'px', top: delta + 'px'});
+
+                loadingIcon.tick (15).draw ();
             }
         }
 
-        /*global jQuery
-        *
-        * FlexVerticalCenter.js 1.0
-        *
-        * Copyright 2011, Paul Sprangers http://paulsprangers.com
-        * Released under the WTFPL license
-        * http://sam.zoy.org/wtfpl/
-        *
-        * Date: Fri Oct 28 19:12:00 2011 +0100
-        */
+        /**
+         *global jQuery
+         *
+         * FlexVerticalCenter.js 1.0
+         *
+         * Copyright 2011, Paul Sprangers http://paulsprangers.com
+         * Released under the WTFPL license
+         * http://sam.zoy.org/wtfpl/
+         *
+         * Date: Fri Oct 28 19:12:00 2011 +0100
+         */
         (function( $ ){
 
           $.fn.centerVerticallyInParent = function( options ) {
@@ -284,14 +287,13 @@ ready (function () {
             });
 
           };
-
         })( jQuery );
     }
 
     // Fades away the loading icon and fades in the contents of the homepage
     function animateEntrance () {
-        $('#loading').fadeOut (200, function () {
-            $('#loadingcover').fadeOut (200);
+        $('#loading').fadeOut (150, function () {
+            $('#loadingcover').fadeOut (150);
         });
     }
 
@@ -388,65 +390,4 @@ function ajaxText (url, sCB, eCB) {
 
     req.open ('GET', url, ASYNC);
     req.send ();
-}
-
-Array.prototype.toString = function () {
-    var s = '', n = '\n    ';
-    for (var i = 0, t = this; i < t.length; i++) s += i > 0? ',' + n + t[i] : n + t[0];
-    return '[' + s + '\n]';
-};
-
-function printHTMLArray (arr, i, ind, s) {
-    if (arguments.length === 1) {i = 0; ind = 0; s = '';}
-
-    var prevWasOpening = false, prevWasClosing = false, tab = '    ', n = '\n';
-    if (i < arr.length) {
-
-        // Matches opening HTML tags
-        if (arr[i].match (/^<[^/]/)) {
-            prevWasClosing = false;
-
-            // Two consecutive opening tags indicates recursive tab adjustment
-            if (prevWasOpening) {
-                s += _(tab, ind) + arr[i] + n;
-                return printHTMLArray (arr, i + 1, ind + 1, s);
-            }
-
-            // This is the first opening tag, or first opening tag after a closing tag
-            else {
-                prevWasOpening = true;
-                s += _(tab, ind) + arr[i] + n;
-                return printHTMLArray (arr, i + 1, ind, s);
-            }
-        }
-
-        // Matches closing HTML tags
-        else if (arr[i].match (/^<\//)) {
-            prevWasOpening = false;
-
-            // Two consecutive closing tags indicates recursive tab adjustment
-            if (prevWasClosing) {
-                s += _(tab, ind) + arr[i] + n;
-                return printHTMLArray (arr, i + 1, ind - 1, s);
-            }
-
-            // This is a first closing tag that came after an opening tag
-            else {
-                prevWasClosing = true;
-                s += _(tab, ind) + arr[i] + n;
-                return printHTMLArray (arr, i + 1, ind, s);
-            }
-        }
-
-        // Work with everything else
-        else s += _(tab, ind) + arr[i] + n;
-    }
-
-    function _ (str, t) {
-        var __ = '';
-        for (var ___ = 0; ___ < t; ___++) __ += str;
-        return __;
-    }
-
-    return s;
 }
